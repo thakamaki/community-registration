@@ -1,9 +1,16 @@
 {
   "rewrites": [
+    { "source": "/api/pulsara/:path*", "destination": "/api/pulsara" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
     {
-      "source": "/api/pulsara/:path*",
-      "destination": "/api/pulsara"
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
     }
   ]
 }
+
 
