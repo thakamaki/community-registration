@@ -106,7 +106,7 @@ main{max-width:940px;margin:26px auto 70px;padding:0 14px;display:flex;flex-dire
 .auth-status{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:20px;font-size:.82rem;font-weight:700;}
 .auth-status.in{background:#e8f5f0;color:#00695c;border:1.5px solid #00897b;}
 .auth-status.out{background:#fce8e8;color:#b71c1c;border:1.5px solid var(--red);}
-.log-box{background:#0d1b2a;border-radius:8px;padding:14px 16px;font-family:monospace;font-size:.8rem;color:#7ececa;max-height:280px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;}
+.log-box{background:#0d1b2a;border-radius:8px;padding:14px 16px;font-family:monospace;font-size:.8rem;color:#7ececa;max-height:320px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;}
 .btn-save{background:var(--teal);color:var(--white);border:none;border-radius:8px;padding:13px 36px;font-size:1rem;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:9px;transition:background .2s,transform .1s;font-family:inherit;}
 .btn-save:hover{background:var(--teal-d);}
 .btn-save:active{transform:scale(.97);}
@@ -331,7 +331,7 @@ main{max-width:940px;margin:26px auto 70px;padding:0 14px;display:flex;flex-dire
         <div class="env-row">
           <span class="env-lbl">API Environment</span>
           <select class="env-sel" id="envSel" onchange="onEnvChange()">
-            <option value="https://demo-api.pulsara.com">Demo</option>
+            <option value="https://us-internal-demo.pulsara.com" selected>Demo (Internal)</option>
             <option value="https://api.pulsara.com">Production</option>
           </select>
         </div>
@@ -413,8 +413,8 @@ main{max-width:940px;margin:26px auto 70px;padding:0 14px;display:flex;flex-dire
 let id_token = sessionStorage.getItem('pulsara_token');
 let configured_hospital_id = sessionStorage.getItem('pulsara_hospital_id');
 const CLIENT_IDS = {
-  'https://demo-api.pulsara.com': 'pulsara:client:demo',
-  'https://api.pulsara.com': 'pulsara:client:prod'
+  'https://us-internal-demo.pulsara.com': 'pulsara:client:demo',
+  'https://api.pulsara.com': 'pulsara:client:prod'  // adjust if production ID differs
 };
 const MOA_ED_PATIENT = 'ED_PATIENT';
 const AGE_UNITS_YEARS = 'YEARS';
@@ -485,8 +485,8 @@ function slog(msg, isErr = false) {
   box.scrollTop = box.scrollHeight;
 
   const lines = box.textContent.split('\n');
-  if (lines.length > 120) {
-    box.textContent = lines.slice(-120).join('\n');
+  if (lines.length > 150) {
+    box.textContent = lines.slice(-150).join('\n');
   }
 
   if (isErr) toast(msg, 'error');
@@ -520,24 +520,42 @@ function updateAuthBadge() {
 }
 
 // ──────────────────────────────────────────────
-// LOGIN
+// LOGIN (with detailed error logging)
 // ──────────────────────────────────────────────
 async function doLogin() {
   const user = document.getElementById('adminUser').value.trim();
   const pass = document.getElementById('adminPass').value;
   if (!user || !pass) { toast('Enter username and password', 'error'); return; }
-  slog(`[LOGIN] Attempting as ${user} on ${apiHost()}`);
+
+  slog(`[LOGIN ATTEMPT] User: ${user} | Env: ${apiHost()}`);
+  slog(`[LOGIN] client_id: ${clientId()}`);
 
   try {
     const r = await fetch(resolveApiBase('/api/v2/oauth2/token'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: user, password: pass, grant_type: 'password', client_id: clientId(), scope: 'web:all' })
+      body: JSON.stringify({
+        username: user,
+        password: pass,
+        grant_type: 'password',
+        client_id: clientId(),
+        scope: 'web:all'
+      })
     });
 
-    slog(`[LOGIN RESPONSE] Status: ${r.status}`);
+    slog(`[LOGIN] HTTP Status: ${r.status} ${r.statusText}`);
 
-    const d = await r.json();
+    let bodyText = await r.text();
+    let d;
+    try {
+      d = JSON.parse(bodyText);
+      slog(`[LOGIN RESPONSE JSON] ${JSON.stringify(d, null, 2)}`);
+    } catch (parseErr) {
+      slog(`[LOGIN RESPONSE TEXT] ${bodyText.substring(0, 500)}${bodyText.length > 500 ? '...' : ''}`, true);
+      toast(`Login failed: ${r.status} - non-JSON response`, 'error');
+      return;
+    }
+
     if (d.id_token) {
       id_token = d.id_token;
       sessionStorage.setItem('pulsara_token', id_token);
@@ -545,10 +563,12 @@ async function doLogin() {
       updateAuthBadge();
       toast('Logged in successfully', 'success');
     } else {
-      slog('✗ Login failed: ' + (d.error_description || JSON.stringify(d)), true);
+      slog(`✗ Login rejected: ${JSON.stringify(d)}`, true);
+      toast('Login failed – see log for details', 'error');
     }
   } catch (e) {
-    slog('✗ Login network error: ' + e.message, true);
+    slog(`✗ Login network error: ${e.message}`, true);
+    toast('Network error during login', 'error');
   }
 }
 
@@ -564,12 +584,11 @@ function doLogout() {
 // PROXY HELPER (for Vercel rewrite)
 // ──────────────────────────────────────────────
 function resolveApiBase(path) {
-  // All Pulsara calls go through Vercel proxy → no CORS issues
   return '/api/pulsara' + path;
 }
 
 // ──────────────────────────────────────────────
-// QR / INCIDENT HELPERS (unchanged)
+// QR / INCIDENT HELPERS
 // ──────────────────────────────────────────────
 function onIncidentChange() { document.getElementById('qrPanel').style.display = 'none'; }
 
@@ -635,11 +654,11 @@ function printQR() {
 }
 
 async function lookupIncident() {
-  // unchanged – keep as is
+  // unchanged – keep as is for now
 }
 
 // ──────────────────────────────────────────────
-// AGE / DOB HANDLERS (unchanged)
+// AGE / DOB HANDLERS
 // ──────────────────────────────────────────────
 function onDobChange() {
   const dobStr = document.getElementById('dob').value;
@@ -673,7 +692,7 @@ function onAgeChange() {
 }
 
 // ──────────────────────────────────────────────
-// IMAGE HANDLING (camera, drop, thumbs)
+// IMAGE HANDLING
 // ──────────────────────────────────────────────
 function dzo(e,t){e.preventDefault();document.getElementById('dz-'+t).classList.add('over');}
 function dzl(t){document.getElementById('dz-'+t).classList.remove('over');}
@@ -794,7 +813,7 @@ async function createPatient(payload) {
 }
 
 // ──────────────────────────────────────────────
-// UPLOAD ATTACHMENT (detailed logging)
+// UPLOAD ATTACHMENT
 // ──────────────────────────────────────────────
 async function uploadAttachment(patientId, file) {
   const start = performance.now();
@@ -803,7 +822,6 @@ async function uploadAttachment(patientId, file) {
 
   slog(`[ATTACH START] Patient ${patientId} | File: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
   slog(`  • Type: ${file.type || 'unknown'}`);
-  slog(`  • Last modified: ${file.lastModified ? new Date(file.lastModified).toISOString() : 'n/a'}`);
 
   const url = resolveApiBase(`/api/v1/patient-channels/${patientId}/attachments?alert=true`);
   slog(`[ATTACH URL] ${url}`);
