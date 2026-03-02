@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/pulsara/:path*",
+      "destination": "https://demo-api.pulsara.com/:path*"
+    }
+  ]
+}
