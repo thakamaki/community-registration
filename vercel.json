@@ -1,4 +1,15 @@
 {
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "api/pulsara.js",
+      "use": "@vercel/node"
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/pulsara/:path*",
@@ -7,6 +18,15 @@
     {
       "source": "/(.*)",
       "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Content-Type", "value": "text/html; charset=utf-8" },
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
     }
   ]
 }
