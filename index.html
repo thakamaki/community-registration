@@ -491,13 +491,10 @@ const GENDER_IDS = { UNKNOWN: 1, MALE: 2, FEMALE: 3 };
 function apiHost() { return document.getElementById('envSel').value; }
 
 function resolveApiBase(apiPath) {
-  const host = window.location.host;
-  const isProxy = host.startsWith('localhost:3000') || host.startsWith('127.0.0.1:3000');
-  if (isProxy) {
-    const envKey = PROXY_KEYS[apiHost()] || 'demo';
-    return `http://localhost:3000/proxy/${envKey}${apiPath}`;
-  }
-  return apiHost() + apiPath.replace(/^\//, '');
+  // Always route through the Vercel serverless proxy to avoid CORS.
+  // On localhost dev (port 3000) use the same proxy path — works identically.
+  const envKey = PROXY_KEYS[apiHost()] || 'demo';
+  return `/api/proxy/${envKey}${apiPath}`;
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
