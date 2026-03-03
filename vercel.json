@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/pulsara/:path*",
+      "destination": "/api/pulsara"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
