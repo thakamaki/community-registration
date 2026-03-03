@@ -1,4 +1,3 @@
-// api/pulsara.js
 export default async function handler(req, res) {
   const path = req.url.replace(/^\/api\/pulsara/, '') || '/';
   const target = `https://us-internal-demo.pulsara.com${path}`;
@@ -6,19 +5,19 @@ export default async function handler(req, res) {
   const headers = {};
   for (const [key, value] of Object.entries(req.headers)) {
     const k = key.toLowerCase();
-    if (['host', 'origin', 'referer', 'x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto'].includes(k)) continue;
+    if (['host', 'origin', 'referer', 'x-forwarded-for',
+         'x-forwarded-host', 'x-forwarded-proto'].includes(k)) continue;
     headers[key] = value;
   }
-
-  headers['origin'] = 'https://app-demo.pulsara.com';
+  headers['origin']  = 'https://app-demo.pulsara.com';
   headers['referer'] = 'https://app-demo.pulsara.com/';
 
-  let body = undefined;
+  let body;
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-    body = await new Promise((resolve) => {
+    body = await new Promise(resolve => {
       const chunks = [];
-      req.on('data', chunk => chunks.push(chunk));
-      req.on('end', () => resolve(Buffer.concat(chunks)));
+      req.on('data', c => chunks.push(c));
+      req.on('end',  () => resolve(Buffer.concat(chunks)));
     });
   }
 
@@ -31,25 +30,20 @@ export default async function handler(req, res) {
 
     response.headers.forEach((value, key) => {
       const k = key.toLowerCase();
-      if (['access-control-allow-origin', 'access-control-allow-credentials'].includes(k)) return;
+      if (['access-control-allow-origin',
+           'access-control-allow-credentials'].includes(k)) return;
       res.setHeader(key, value);
     });
 
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Expose-Headers', '*');
-
+    res.setHeader('Access-Control-Expose-Headers', 'X-Error-Code, Content-Disposition');
     res.status(response.status);
+    res.send(Buffer.from(await response.arrayBuffer()));
 
-    const responseBody = await response.arrayBuffer();
-    res.send(Buffer.from(responseBody));
   } catch (err) {
     console.error('[Pulsara Proxy Error]', err);
     res.status(502).json({ error: 'Proxy error', detail: err.message });
   }
 }
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+export const config = { api: { bodyParser: false } };
