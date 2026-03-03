@@ -1,10 +1,5 @@
-
 {
   "rewrites": [
-    {
-      "source": "/api/pulsara/:path*",
-      "destination": "/api/pulsara"
-    }
+    { "source": "/api/proxy/:slug*", "destination": "/api/proxy" }
   ]
 }
-
