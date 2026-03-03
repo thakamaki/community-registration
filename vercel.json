@@ -10,14 +10,14 @@
       "use": "@vercel/node"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/pulsara/:path*",
-      "destination": "/api/pulsara"
+      "src": "/api/pulsara/:path*",
+      "dest": "/api/pulsara"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "headers": [
@@ -30,3 +30,4 @@
     }
   ]
 }
+
