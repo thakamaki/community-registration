@@ -478,9 +478,8 @@ const QR = {
 // ─── State ────────────────────────────────────────────────────────────────────
 const imgs = { patient: [], belongings: [] };
 let camStream = null, camType = 'patient';
-// Token lives in sessionStorage — cleared automatically when tab/browser closes
 let id_token = sessionStorage.getItem('pulsara_token') || null;
-let configured_hospital_id = parseInt(sessionStorage.getItem('pulsara_hospital_id') || '0') || null;
+let configured_moa = sessionStorage.getItem('pulsara_moa') || 'INBOUND_EMS';
 const T0 = new Date();
 
 const PROXY_KEYS = {
@@ -857,10 +856,10 @@ function setP(pct, msg, step) {
 // Uses x-api-key header (Pulsara API Token), NOT Bearer.
 // Endpoint: POST /api/v1/patient-channels
 async function createPatient(payload) {
-  slog(`POST /api/v1/patient-channels — ${payload.name.first} ${payload.name.last}…`);
-  if (payload.dob)          slog(`  dob: ${payload.dob.month}/${payload.dob.day}/${payload.dob.year}`);
-  if (payload.age_in_units) slog(`  age_in_units: ${payload.age_in_units.age} ${payload.age_in_units.units}`);
-  slog(`  token preview: ${id_token ? id_token.slice(0,12) + '…' : 'NOT SET'}`);
+  slog(`POST /api/v1/patient-channels — ${payload.name?.first} ${payload.name?.last}`);
+  slog(`  method_of_arrival: ${payload.case?.method_of_arrival}`);
+  slog(`  payload: ${JSON.stringify(payload)}`);
+  slog(`  token: ${id_token ? id_token.slice(0,12) + '…' : 'NOT SET'}`);
 
   const r = await fetch(resolveApiBase('/api/v1/patient-channels'), {
     method:  'POST',
