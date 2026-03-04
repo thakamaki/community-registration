@@ -860,6 +860,7 @@ async function createPatient(payload) {
   slog(`POST /api/v2/patients — ${payload.first_name} ${payload.last_name}…`);
   if (payload.dob)          slog(`  dob: ${payload.dob.month}/${payload.dob.day}/${payload.dob.year}`);
   if (payload.age_in_units) slog(`  age_in_units: ${payload.age_in_units.age} (units=${payload.age_in_units.units})`);
+  slog(`  token preview: ${id_token ? id_token.slice(0,12) + '…' : 'NOT SET'}`);
 
   const r = await fetch(resolveApiBase('/api/v2/patients'), {
     method:  'POST',
