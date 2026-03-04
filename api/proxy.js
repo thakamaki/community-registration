@@ -1,7 +1,13 @@
 // api/proxy.js
-// Vercel serverless function — forwards requests to Pulsara server-side (no CORS).
-// URL pattern:  /api/proxy/<env>/<pulsara-path>
-// Example:      /api/proxy/demo/api/v2/patients
+// Vercel serverless proxy — forwards requests to Pulsara server-side (no CORS).
+// Route pattern: /api/proxy/<env>/<pulsara-path>
+// vercel.json rewrites /api/proxy/(.*) → /api/proxy?slug=$1
+
+export const config = {
+  api: {
+    bodyParser: false, // we handle body manually to support multipart
+  },
+};
 
 const HOSTS = {
   demo:       'https://us-internal-demo.pulsara.com',
@@ -10,67 +16,78 @@ const HOSTS = {
 };
 
 export default async function handler(req, res) {
-  // CORS headers so the browser doesn't block the response
+  // ── CORS ──────────────────────────────────────────────────────────────────
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization,Content-Type');
-
-  // Preflight
+  res.setHeader('Access-Control-Allow-Headers', 'x-api-key,Authorization,Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // slug arrives as a single string e.g. "demo/api/v2/patients"
+  // ── Parse slug → env + path ───────────────────────────────────────────────
   const slugRaw = req.query.slug;
   if (!slugRaw) {
     return res.status(400).json({ error: 'Usage: /api/proxy/<env>/<pulsara-path>' });
   }
 
-  const parts    = slugRaw.split('/');          // ["demo","api","v2","patients"]
-  const env      = parts[0];                    // "demo"
-  const apiPath  = '/' + parts.slice(1).join('/'); // "/api/v2/patients"
+  const parts   = slugRaw.split('/');
+  const env     = parts[0];
+  const apiPath = '/' + parts.slice(1).join('/');
+  const host    = HOSTS[env];
 
-  const host = HOSTS[env];
   if (!host) {
-    return res.status(400).json({ error: `Unknown env "${env}". Use: ${Object.keys(HOSTS).join(', ')}` });
+    return res.status(400).json({
+      error: `Unknown env "${env}". Valid options: ${Object.keys(HOSTS).join(', ')}`
+    });
   }
 
-  // Rebuild query string, dropping our internal slug param
+  // Strip internal query params, forward the rest
   const qs = new URLSearchParams(req.query);
   qs.delete('slug');
   const qsStr    = qs.toString();
   const targetUrl = `${host}${apiPath}${qsStr ? '?' + qsStr : ''}`;
 
-  // Forward only the headers Pulsara needs
+  // ── Forward headers ────────────────────────────────────────────────────────
   const fwdHeaders = {};
+  if (req.headers['x-api-key'])     fwdHeaders['x-api-key']     = req.headers['x-api-key'];
   if (req.headers['authorization']) fwdHeaders['authorization'] = req.headers['authorization'];
-  if (req.headers['content-type'])  fwdHeaders['content-type']  = req.headers['content-type'];
+  // Forward content-type only for non-multipart (multipart needs browser-set boundary)
+  const ct = req.headers['content-type'] || '';
+  if (ct && !ct.startsWith('multipart/')) fwdHeaders['content-type'] = ct;
 
-  // Read body for mutating methods
-  let body;
+  // ── Read body ─────────────────────────────────────────────────────────────
+  let body = undefined;
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-    body = await getRawBody(req);
+    body = await readBody(req);
+    // For multipart, pass through the full content-type with boundary
+    if (ct.startsWith('multipart/')) fwdHeaders['content-type'] = ct;
   }
 
-  const upstream = await fetch(targetUrl, {
-    method:  req.method,
-    headers: fwdHeaders,
-    body:    body || undefined,
-  });
-
-  const contentType = upstream.headers.get('content-type') || 'application/json';
-  res.status(upstream.status).setHeader('Content-Type', contentType);
-
-  if (contentType.includes('application/json')) {
-    return res.json(await upstream.json());
-  } else {
-    return res.send(Buffer.from(await upstream.arrayBuffer()));
+  // ── Proxy to Pulsara ──────────────────────────────────────────────────────
+  let upstream;
+  try {
+    upstream = await fetch(targetUrl, {
+      method:  req.method,
+      headers: fwdHeaders,
+      body,
+    });
+  } catch (err) {
+    console.error('Proxy fetch error:', err);
+    return res.status(502).json({ error: `Upstream fetch failed: ${err.message}` });
   }
+
+  // ── Stream response back ──────────────────────────────────────────────────
+  const resCt = upstream.headers.get('content-type') || 'application/json';
+  res.status(upstream.status).setHeader('Content-Type', resCt);
+
+  const buf = Buffer.from(await upstream.arrayBuffer());
+  return res.send(buf);
 }
 
-function getRawBody(req) {
+// Read the raw request body as a Buffer
+function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    req.on('data', c => chunks.push(typeof c === 'string' ? Buffer.from(c) : c));
-    req.on('end',  () => resolve(Buffer.concat(chunks)));
+    req.on('data', chunk => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    req.on('end',  () => resolve(chunks.length ? Buffer.concat(chunks) : undefined));
     req.on('error', reject);
   });
 }
