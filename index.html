@@ -519,15 +519,20 @@ function resolveApiBase(apiPath) {
 
   const params = new URLSearchParams(window.location.search);
 
-  // Load token from QR URL — this is the primary distribution mechanism
   const urlToken = params.get('t');
   if (urlToken) {
     id_token = urlToken;
     sessionStorage.setItem('pulsara_token', id_token);
-    slog('✓ Pulsara API Token loaded automatically from QR code.');
+    slog('✓ Pulsara API Token loaded from QR code.');
     updateTokenStatus();
   }
-
+  const urlMoa = params.get('moa');
+  if (urlMoa) {
+    configured_moa = urlMoa;
+    sessionStorage.setItem('pulsara_moa', configured_moa);
+    document.getElementById('moaSel').value = configured_moa;
+    slog(`✓ Method of arrival loaded from QR: ${configured_moa}`);
+  }
   if (params.get('incident')) {
     document.getElementById('incidentId').value = params.get('incident');
     updateIncSt();
@@ -535,12 +540,6 @@ function resolveApiBase(apiPath) {
   if (params.get('cp')) {
     document.getElementById('bannerMsg').innerHTML =
       `Collection Point: <strong>${params.get('cp')}</strong> &nbsp;·&nbsp; Fields marked <strong>*</strong> are required.`;
-  }
-  const hidParam = parseInt(params.get('hid'));
-  if (!isNaN(hidParam) && hidParam > 0) {
-    configured_hospital_id = hidParam;
-    sessionStorage.setItem('pulsara_hospital_id', hidParam);
-    document.getElementById('adminHospitalId').value = hidParam;
   }
 
   document.getElementById('cc').addEventListener('input', () => {
@@ -863,15 +862,13 @@ async function createPatient(payload) {
 
   const r = await fetch(resolveApiBase('/api/v1/patient-channels'), {
     method:  'POST',
-    headers: {
-      'x-api-key':    id_token,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
+    headers: { 'x-api-key': id_token, 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload)
   });
   if (!r.ok) {
-    const e = await r.json().catch(() => ({ error: r.statusText }));
-    throw new Error(`Patient create failed (${r.status}): ${JSON.stringify(e)}`);
+    const raw = await r.text();
+    slog(`  ✗ Pulsara response (${r.status}): ${raw}`);
+    throw new Error(`Patient create failed (${r.status}): ${raw}`);
   }
   return r.json();
 }
