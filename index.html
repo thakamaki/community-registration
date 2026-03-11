@@ -80,8 +80,6 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
 .thumb .del{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;
   border:none;background:rgba(0,0,0,.6);color:#fff;font-size:.75rem;cursor:pointer;
   display:flex;align-items:center;justify-content:center;}
-.thumb .tag{position:absolute;bottom:4px;left:4px;font-size:.7rem;background:rgba(0,0,0,.55);
-  color:#fff;border-radius:4px;padding:1px 5px;}
 .img-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
 .img-btn{border:1.5px dashed var(--teal);background:transparent;color:var(--teal-d);
   border-radius:8px;padding:9px 16px;font-size:.82rem;font-weight:700;cursor:pointer;
@@ -327,12 +325,12 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
       </div>
     </div>
 
-    <!-- Section 4 — Chief Complaint -->
+    <!-- Section 4 — Narrative / Notes (maps to Chief Complaint behind the scenes) -->
     <div class="card">
-      <div class="card-head"><div class="ch-ic">🩺</div><h2>Chief Complaint</h2><span class="step">Section 4</span></div>
+      <div class="card-head"><div class="ch-ic">🩺</div><h2>Narrative / Notes</h2><span class="step">Section 4</span></div>
       <div class="card-body">
         <div class="field">
-          <label>Chief Complaint <span class="req">*</span></label>
+          <label>Narrative / Notes <span class="req">*</span></label>
           <div class="cc-wrap">
             <textarea id="cc" rows="3" maxlength="255"
               placeholder="Describe the primary concern or reason for registration…"
@@ -353,7 +351,6 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
           <button class="img-btn" onclick="openCamera()">📷 Take Photo</button>
           <button class="img-btn" onclick="document.getElementById('fileUpload').click()">📁 Upload Photos</button>
         </div>
-        <!-- Single file input, no tag required -->
         <input type="file" id="fileUpload" accept="image/*" multiple style="display:none" onchange="handleFiles(this)"/>
         <div id="prevArea" style="display:none"><div class="img-grid" id="trow"></div></div>
         <p id="noImgNote" style="font-size:.8rem;color:var(--muted);margin-top:6px;">No photos added yet. Photos are optional.</p>
@@ -515,10 +512,9 @@ const CLIENT_IDS = {
 
 let id_token   = null;
 let camStream  = null;
-let currentFacingMode = 'environment'; // default rear camera
+let currentFacingMode = 'environment';
 let isMobile   = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 
-// All photos stored in a single flat array — no tagging
 const allImgs = [];
 
 // ── INIT ──────────────────────────────────────────────────────
@@ -531,13 +527,11 @@ const allImgs = [];
 
   const p = new URLSearchParams(location.search);
 
-  // ── QR deep-link: hide admin tab entirely ──
+  // QR deep-link: hide admin tab entirely
   const isQRUser = p.has('ref');
   if (!isQRUser) {
-    // Direct browser access — show admin tab
     document.getElementById('adminTabBtn').style.display = '';
   }
-  // If QR user, adminTabBtn stays hidden (display:none from HTML)
 
   if (p.has('incident')) {
     document.getElementById('incidentId').value = p.get('incident');
@@ -630,22 +624,16 @@ async function openCamera() {
   currentFacingMode = 'environment';
   document.getElementById('camTypeLabel').textContent = 'Photo';
   document.getElementById('camModal').classList.add('open');
-
-  // Show flip button only on mobile
   document.getElementById('flipBtn').style.display = isMobile ? 'flex' : 'none';
-
   await startCameraStream(currentFacingMode);
 }
 
 async function startCameraStream(facingMode) {
-  // Stop any existing stream first
   if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
-
   try {
     const constraints = isMobile
       ? { video: { facingMode: { ideal: facingMode } }, audio: false }
       : { video: true, audio: false };
-
     const s = await navigator.mediaDevices.getUserMedia(constraints);
     camStream = s;
     const vid = document.getElementById('camVideo');
@@ -681,7 +669,6 @@ function snapPhoto() {
   closeCamera();
 }
 
-// Single upload handler — no type tagging
 function handleFiles(input) {
   Array.from(input.files).forEach(file => {
     addThumb(URL.createObjectURL(file));
@@ -725,7 +712,7 @@ function generateQR() {
   if (!id_token) { toast('Log in first — token is required for QR', 'error'); return; }
 
   const cp   = document.getElementById('cpLabel').value.trim();
-  // QR URL points to base page with NO admin hash — admin tab will be hidden for this user
+  // QR URL uses ?ref= param — this causes admin tab to be hidden on load
   const base = window.location.href.split('?')[0].split('#')[0];
   const encodedToken = btoa(id_token);
 
@@ -744,8 +731,6 @@ function pushIncidentToForm() {
   if (!inc) { toast('Enter an Incident ID first', 'error'); return; }
   document.getElementById('incidentId').value = inc;
   updateIncSt();
-  switchTab('reg', document.querySelector('.tab-btn.active') || document.querySelectorAll('.tab-btn')[0]);
-  // Switch to reg tab button
   const regBtn = document.querySelectorAll('.tab-btn')[0];
   switchTab('reg', regBtn);
   toast('Incident ID pushed to registration form', 'success');
@@ -836,7 +821,7 @@ function doLogout() {
 
 // ── VALIDATION ────────────────────────────────────────────────
 function validate() {
-  const required = [['incidentId','Incident ID'],['firstName','First Name'],['lastName','Last Name'],['cc','Chief Complaint']];
+  const required = [['incidentId','Incident ID'],['firstName','First Name'],['lastName','Last Name'],['cc','Narrative / Notes']];
   for (const [id, lbl] of required) {
     const el = document.getElementById(id);
     if (!el.value.trim()) {
