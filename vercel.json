@@ -1,6 +1,8 @@
 {
   "rewrites": [
-    { "source": "/api/proxy/(.*)", "destination": "/api/proxy?slug=$1" }
+    {
+      "source": "/api/pulsara/:path*",
+      "destination": "https://us-internal-demo.pulsara.com/:path*"
+    }
   ]
 }
-
