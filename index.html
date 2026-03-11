@@ -87,18 +87,24 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
   border-radius:8px;padding:9px 16px;font-size:.82rem;font-weight:700;cursor:pointer;
   font-family:inherit;transition:background .2s;}
 .img-btn:hover{background:rgba(0,181,173,.12);}
-#camModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;
+
+/* ── Camera Modal ── */
+#camModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;
   align-items:center;justify-content:center;}
 #camModal.open{display:flex;}
-.cam-box{background:var(--white);border-radius:14px;overflow:hidden;width:min(440px,95vw);}
-.cam-head{display:flex;justify-content:space-between;padding:12px 16px;font-weight:700;
+.cam-box{background:var(--white);border-radius:14px;overflow:hidden;width:min(460px,95vw);}
+.cam-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;font-weight:700;
   background:var(--teal);color:#fff;}
 .ctype{font-size:.8rem;opacity:.85;}
-#camVideo{width:100%;max-height:300px;object-fit:cover;}
+#camVideo{width:100%;max-height:320px;object-fit:cover;display:block;}
 #camCanvas{display:none;}
-.cam-foot{display:flex;gap:12px;align-items:center;justify-content:center;padding:14px;background:var(--bg);}
-.snap-btn{width:60px;height:60px;border-radius:50%;border:none;background:var(--teal);color:#fff;font-size:1.5rem;cursor:pointer;}
+.cam-foot{display:flex;gap:12px;align-items:center;justify-content:center;padding:14px;background:var(--bg);flex-wrap:wrap;}
+.snap-btn{width:64px;height:64px;border-radius:50%;border:none;background:var(--teal);color:#fff;font-size:1.6rem;cursor:pointer;box-shadow:0 2px 8px rgba(0,181,173,.4);transition:transform .1s;}
+.snap-btn:active{transform:scale(.93);}
+.flip-btn{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--teal);background:transparent;color:var(--teal-d);font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+.flip-btn:hover{background:rgba(0,181,173,.12);}
 .close-cam{padding:10px 20px;border:none;background:var(--red);color:#fff;border-radius:8px;cursor:pointer;font-weight:700;font-family:inherit;}
+
 #prog{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;
   align-items:center;justify-content:center;}
 #prog.open{display:flex;}
@@ -135,8 +141,6 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
 .log-box{background:#0d1b2a;border-radius:8px;padding:14px 16px;font-family:monospace;
   font-size:.78rem;color:#7ececa;height:260px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;}
 .log-err{color:#ff6b6b;}
-
-/* ── QR Panel ── */
 .qr-panel{background:#f0fafa;border:1.5px solid var(--teal);border-radius:12px;padding:20px;margin-top:18px;}
 .qr-panel h3{font-size:.95rem;font-weight:800;color:var(--teal-m);margin-bottom:14px;}
 .qr-inner{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;}
@@ -148,7 +152,6 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
 .qr-btn{border:1.5px solid var(--teal);background:transparent;color:var(--teal-d);border-radius:7px;padding:8px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;transition:background .2s;}
 .qr-btn:hover{background:rgba(0,181,173,.12);}
 .qr-note{font-size:.75rem;color:var(--muted);margin-top:10px;line-height:1.5;}
-
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);
   background:var(--ok);color:#fff;border-radius:10px;padding:12px 24px;font-weight:700;
   font-size:.88rem;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:9999;
@@ -159,7 +162,6 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
 #toast.error{background:var(--red);}
 .cc-wrap{position:relative;}
 .cc-count{position:absolute;right:10px;bottom:8px;font-size:.7rem;color:var(--muted);}
-
 @media(max-width:640px){
   .g2,.g3{grid-template-columns:1fr;}
   .s2{grid-column:span 1;}
@@ -182,11 +184,13 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
   <div class="cam-box">
     <div class="cam-head">
       <span>📷 Camera Capture</span>
-      <span class="ctype" id="camTypeLabel">Patient Photo</span>
+      <span class="ctype" id="camTypeLabel">Photo</span>
     </div>
     <video id="camVideo" autoplay playsinline></video>
     <canvas id="camCanvas" style="display:none;"></canvas>
     <div class="cam-foot">
+      <!-- Flip button — only shown on mobile -->
+      <button class="flip-btn" id="flipBtn" onclick="flipCamera()" title="Flip camera" style="display:none;">🔄</button>
       <button class="snap-btn" onclick="snapPhoto()">📸</button>
       <button class="close-cam" onclick="closeCamera()">✕ Close</button>
     </div>
@@ -219,17 +223,17 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
   </div>
 </header>
 
-<!-- TABS -->
-<div class="tab-bar">
+<!-- TABS — admin tab hidden by default, shown only for authenticated admins -->
+<div class="tab-bar" id="tabBar">
   <button class="tab-btn active" onclick="switchTab('reg',this)">📋 Registration Form</button>
-  <button class="tab-btn" onclick="switchTab('admin',this)">⚙️ Admin / Setup</button>
+  <button class="tab-btn" id="adminTabBtn" style="display:none;" onclick="switchTab('admin',this)">⚙️ Admin / Setup</button>
 </div>
 
-<!-- ═══════════ TAB 1 — REGISTRATION FORM ═══════════ -->
+<!-- ═══ TAB 1 — REGISTRATION FORM ═══ -->
 <div id="tab-reg" class="tab-pane active">
   <div class="banner">
     <span>ℹ️</span>
-    <span>All information is securely transmitted to Pulsara. Fields marked <strong>*</strong> are required.</span>
+    <span id="bannerText">All information is securely transmitted to Pulsara. Fields marked <strong>*</strong> are required.</span>
   </div>
   <main>
     <!-- Incident bar -->
@@ -346,13 +350,11 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
       <div class="card-head"><div class="ch-ic">📷</div><h2>Photos</h2><span class="step">Section 5</span></div>
       <div class="card-body">
         <div class="img-actions">
-          <button class="img-btn" onclick="openCamera('patient')">📷 Camera — Patient</button>
-          <button class="img-btn" onclick="openCamera('belongings')">📷 Camera — Belongings</button>
-          <button class="img-btn" onclick="document.getElementById('filePatient').click()">📁 Upload Patient</button>
-          <button class="img-btn" onclick="document.getElementById('fileBelong').click()">📁 Upload Belongings</button>
+          <button class="img-btn" onclick="openCamera()">📷 Take Photo</button>
+          <button class="img-btn" onclick="document.getElementById('fileUpload').click()">📁 Upload Photos</button>
         </div>
-        <input type="file" id="filePatient" accept="image/*" multiple style="display:none" onchange="handleFiles(this,'patient')"/>
-        <input type="file" id="fileBelong" accept="image/*" multiple style="display:none" onchange="handleFiles(this,'belongings')"/>
+        <!-- Single file input, no tag required -->
+        <input type="file" id="fileUpload" accept="image/*" multiple style="display:none" onchange="handleFiles(this)"/>
         <div id="prevArea" style="display:none"><div class="img-grid" id="trow"></div></div>
         <p id="noImgNote" style="font-size:.8rem;color:var(--muted);margin-top:6px;">No photos added yet. Photos are optional.</p>
       </div>
@@ -366,7 +368,7 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
   </main>
 </div>
 
-<!-- ═══════════ TAB 2 — ADMIN / SETUP ═══════════ -->
+<!-- ═══ TAB 2 — ADMIN / SETUP (hidden from QR users) ═══ -->
 <div id="tab-admin" class="tab-pane">
   <div class="admin-wrap">
 
@@ -378,7 +380,6 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
           <span class="env-lbl">Environment</span>
           <select class="env-sel" id="envSel" onchange="onEnvChange()">
             <option value="https://us-internal-demo.pulsara.com">Demo (Internal)</option>
-            <!-- <option value="https://YOUR-TEST-URL-HERE">Sysadmin Test</option> -->
             <option value="https://api.pulsara.com">Production</option>
           </select>
         </div>
@@ -414,7 +415,7 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
       </div>
     </div>
 
-    <!-- ▼▼▼ INCIDENT SETUP & QR CODE ▼▼▼ -->
+    <!-- Incident Setup & QR -->
     <div class="card">
       <div class="card-head"><div class="ch-ic">🔗</div><h2>Incident Setup &amp; QR Code</h2><span class="step">Step 3</span></div>
       <div class="card-body">
@@ -479,9 +480,8 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
   </div>
 </div>
 
-<!-- ═══════════ QR LIB (pure canvas, no external dep) ═══════════ -->
+<!-- QR LIB -->
 <script>
-// Minimal QR Code renderer using qrserver.com image API (free, CORS-friendly, no library needed)
 function renderQR(text, canvasEl) {
   const sz = 180;
   const url = `https://api.qrserver.com/v1/create-qr-code/?size=${sz}x${sz}&data=${encodeURIComponent(text)}&format=png&margin=10&ecc=M`;
@@ -493,7 +493,6 @@ function renderQR(text, canvasEl) {
     ctx.drawImage(img, 0, 0, sz, sz);
   };
   img.onerror = () => {
-    // Fallback: show URL text in canvas
     const ctx = canvasEl.getContext('2d');
     ctx.fillStyle = '#fff'; ctx.fillRect(0,0,sz,sz);
     ctx.fillStyle = '#e53935'; ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center';
@@ -505,9 +504,8 @@ function renderQR(text, canvasEl) {
 }
 </script>
 
-<!-- ═══════════ MAIN SCRIPT ═══════════ -->
+<!-- MAIN SCRIPT -->
 <script>
-// ── CONSTANTS ──────────────────────────────────────────────────
 const MOA_ED_PATIENT  = 5;
 const AGE_UNITS_YEARS = 1;
 const CLIENT_IDS = {
@@ -515,13 +513,15 @@ const CLIENT_IDS = {
   'https://api.pulsara.com':              'pulsara:client:prod'
 };
 
-// ── STATE ──────────────────────────────────────────────────────
-let id_token  = null;
-let camStream = null;
-let camType   = 'patient';
-const imgs = { patient: [], belongings: [] };
+let id_token   = null;
+let camStream  = null;
+let currentFacingMode = 'environment'; // default rear camera
+let isMobile   = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 
-// ── INIT ───────────────────────────────────────────────────────
+// All photos stored in a single flat array — no tagging
+const allImgs = [];
+
+// ── INIT ──────────────────────────────────────────────────────
 (function init() {
   const now = new Date();
   document.getElementById('tsDate').textContent = now.toLocaleDateString();
@@ -529,18 +529,24 @@ const imgs = { patient: [], belongings: [] };
   document.getElementById('tsISO').textContent  = now.toISOString();
   document.getElementById('createdAt').value    = now.toISOString();
 
-  // Pre-fill from QR deep-link params
   const p = new URLSearchParams(location.search);
+
+  // ── QR deep-link: hide admin tab entirely ──
+  const isQRUser = p.has('ref');
+  if (!isQRUser) {
+    // Direct browser access — show admin tab
+    document.getElementById('adminTabBtn').style.display = '';
+  }
+  // If QR user, adminTabBtn stays hidden (display:none from HTML)
+
   if (p.has('incident')) {
     document.getElementById('incidentId').value = p.get('incident');
     updateIncSt();
   }
   if (p.has('cp')) {
-    // Show collection point name in banner if present
-    const b = document.querySelector('.banner span:last-child');
+    const b = document.getElementById('bannerText');
     if (b) b.innerHTML += ` &nbsp;|&nbsp; 📍 <strong>${p.get('cp')}</strong>`;
   }
-  // Restore token from QR param (disguised as 'ref')
   if (p.has('ref')) {
     try {
       id_token = atob(p.get('ref'));
@@ -550,13 +556,13 @@ const imgs = { patient: [], belongings: [] };
   }
 })();
 
-// ── ENV / PROXY HELPERS ────────────────────────────────────────
+// ── ENV / PROXY ────────────────────────────────────────────────
 function apiHost()  { return document.getElementById('envSel').value; }
 function clientId() { return CLIENT_IDS[apiHost()] || 'pulsara:client:demo'; }
 function onEnvChange() { slog(`[ENV] Switched to ${apiHost()}`); }
 function resolveApiBase(path) { return '/api/pulsara' + path; }
 
-// ── UI HELPERS ─────────────────────────────────────────────────
+// ── UI ────────────────────────────────────────────────────────
 function switchTab(name, btn) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -619,14 +625,41 @@ function calcAge() {
   }
 }
 
-// ── CAMERA ─────────────────────────────────────────────────────
-function openCamera(type) {
-  camType = type;
-  document.getElementById('camTypeLabel').textContent = type === 'patient' ? 'Patient Photo' : 'Belongings';
+// ── CAMERA ───────────────────────────────────────────────────
+async function openCamera() {
+  currentFacingMode = 'environment';
+  document.getElementById('camTypeLabel').textContent = 'Photo';
   document.getElementById('camModal').classList.add('open');
-  navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }, audio:false })
-    .then(s => { camStream = s; document.getElementById('camVideo').srcObject = s; })
-    .catch(() => { toast('Camera unavailable','error'); closeCamera(); });
+
+  // Show flip button only on mobile
+  document.getElementById('flipBtn').style.display = isMobile ? 'flex' : 'none';
+
+  await startCameraStream(currentFacingMode);
+}
+
+async function startCameraStream(facingMode) {
+  // Stop any existing stream first
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+
+  try {
+    const constraints = isMobile
+      ? { video: { facingMode: { ideal: facingMode } }, audio: false }
+      : { video: true, audio: false };
+
+    const s = await navigator.mediaDevices.getUserMedia(constraints);
+    camStream = s;
+    const vid = document.getElementById('camVideo');
+    vid.srcObject = s;
+    await vid.play();
+  } catch(e) {
+    toast('Camera unavailable', 'error');
+    closeCamera();
+  }
+}
+
+async function flipCamera() {
+  currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+  await startCameraStream(currentFacingMode);
 }
 
 function closeCamera() {
@@ -640,44 +673,48 @@ function snapPhoto() {
   c.width = v.videoWidth; c.height = v.videoHeight;
   c.getContext('2d').drawImage(v, 0, 0);
   c.toBlob(blob => {
-    const f = new File([blob], `cam-${camType}-${Date.now()}.jpg`, { type:'image/jpeg' });
-    addThumb(URL.createObjectURL(blob), camType);
-    imgs[camType].push(f);
+    const f = new File([blob], `cam-photo-${Date.now()}.jpg`, { type:'image/jpeg' });
+    addThumb(URL.createObjectURL(blob));
+    allImgs.push(f);
     updateNoImgNote();
   }, 'image/jpeg', 0.88);
   closeCamera();
 }
 
-function handleFiles(input, type) {
-  Array.from(input.files).forEach(file => { addThumb(URL.createObjectURL(file), type); imgs[type].push(file); });
+// Single upload handler — no type tagging
+function handleFiles(input) {
+  Array.from(input.files).forEach(file => {
+    addThumb(URL.createObjectURL(file));
+    allImgs.push(file);
+  });
   updateNoImgNote();
   input.value = '';
 }
 
-function addThumb(url, type) {
+function addThumb(url) {
   document.getElementById('prevArea').style.display = 'block';
   const id = 'th-' + Date.now() + Math.random().toString(36).slice(2);
   const d  = document.createElement('div');
   d.className = 'thumb'; d.id = id;
-  d.innerHTML = `<img src="${url}"/><button class="del" onclick="rmThumb('${id}','${type}')">✕</button>`
-              + `<div class="tag">${type==='patient'?'👤':'🎒'}</div>`;
+  d.innerHTML = `<img src="${url}"/><button class="del" onclick="rmThumb('${id}')">✕</button>`;
   document.getElementById('trow').appendChild(d);
 }
 
-function rmThumb(id, type) {
-  const el  = document.getElementById(id);
-  const idx = Array.from(document.getElementById('trow').children).indexOf(el);
-  if (idx > -1) imgs[type].splice(idx, 1);
+function rmThumb(id) {
+  const trow = document.getElementById('trow');
+  const el   = document.getElementById(id);
+  const idx  = Array.from(trow.children).indexOf(el);
+  if (idx > -1) allImgs.splice(idx, 1);
   el?.remove();
-  if (!imgs.patient.length && !imgs.belongings.length) document.getElementById('prevArea').style.display = 'none';
+  if (!allImgs.length) document.getElementById('prevArea').style.display = 'none';
   updateNoImgNote();
 }
 
 function updateNoImgNote() {
-  document.getElementById('noImgNote').style.display = (imgs.patient.length + imgs.belongings.length) ? 'none' : 'block';
+  document.getElementById('noImgNote').style.display = allImgs.length ? 'none' : 'block';
 }
 
-// ── INCIDENT / QR ──────────────────────────────────────────────
+// ── INCIDENT / QR ─────────────────────────────────────────────
 function onIncidentChange() {
   document.getElementById('qrPanel').style.display = 'none';
 }
@@ -688,9 +725,8 @@ function generateQR() {
   if (!id_token) { toast('Log in first — token is required for QR', 'error'); return; }
 
   const cp   = document.getElementById('cpLabel').value.trim();
-  const base = window.location.href.split('?')[0];
-
-  // Encode token as base64 in 'ref' param (disguised, not plain-text)
+  // QR URL points to base page with NO admin hash — admin tab will be hidden for this user
+  const base = window.location.href.split('?')[0].split('#')[0];
   const encodedToken = btoa(id_token);
 
   let url = `${base}?incident=${encodeURIComponent(inc)}&ref=${encodeURIComponent(encodedToken)}`;
@@ -708,7 +744,10 @@ function pushIncidentToForm() {
   if (!inc) { toast('Enter an Incident ID first', 'error'); return; }
   document.getElementById('incidentId').value = inc;
   updateIncSt();
-  switchTab('reg', document.querySelectorAll('.tab-btn')[0]);
+  switchTab('reg', document.querySelector('.tab-btn.active') || document.querySelectorAll('.tab-btn')[0]);
+  // Switch to reg tab button
+  const regBtn = document.querySelectorAll('.tab-btn')[0];
+  switchTab('reg', regBtn);
   toast('Incident ID pushed to registration form', 'success');
   slog(`[PUSH] Incident ${inc} pushed to Registration Form`);
 }
@@ -756,15 +795,12 @@ function printQR() {
   setTimeout(() => w.print(), 600);
 }
 
-// ── LOGIN / LOGOUT ─────────────────────────────────────────────
+// ── LOGIN / LOGOUT ────────────────────────────────────────────
 async function doLogin() {
   const user = document.getElementById('adminUser').value.trim();
   const pass = document.getElementById('adminPass').value;
   if (!user || !pass) { toast('Enter username and password', 'error'); return; }
-
   slog(`[LOGIN] Attempting: ${user} @ ${apiHost()}`);
-  slog(`[LOGIN] client_id: ${clientId()}`);
-
   try {
     const r = await fetch(resolveApiBase('/api/v2/oauth2/token'), {
       method: 'POST',
@@ -773,9 +809,7 @@ async function doLogin() {
     });
     slog(`[LOGIN] HTTP ${r.status} ${r.statusText}`);
     const bodyText = await r.text();
-    let d;
-    try { d = JSON.parse(bodyText); }
-    catch { slog(`[LOGIN] Non-JSON: ${bodyText.substring(0,300)}`, true); toast(`Login failed: ${r.status}`, 'error'); return; }
+    let d; try { d = JSON.parse(bodyText); } catch { slog(`[LOGIN] Non-JSON: ${bodyText.substring(0,300)}`, true); toast(`Login failed: ${r.status}`, 'error'); return; }
     slog(`[LOGIN RESPONSE] ${JSON.stringify(d)}`);
     if (d.id_token) {
       id_token = d.id_token;
@@ -800,7 +834,7 @@ function doLogout() {
   toast('Logged out', '');
 }
 
-// ── VALIDATION ─────────────────────────────────────────────────
+// ── VALIDATION ────────────────────────────────────────────────
 function validate() {
   const required = [['incidentId','Incident ID'],['firstName','First Name'],['lastName','Last Name'],['cc','Chief Complaint']];
   for (const [id, lbl] of required) {
@@ -813,14 +847,13 @@ function validate() {
     }
   }
   if (!id_token) {
-    toast('Not logged in — go to Admin tab first', 'error');
-    switchTab('admin', document.querySelectorAll('.tab-btn')[1]);
+    toast('Not logged in — scan a valid QR code or contact admin', 'error');
     return false;
   }
   return true;
 }
 
-// ── BUILD PAYLOAD ──────────────────────────────────────────────
+// ── BUILD PAYLOAD ─────────────────────────────────────────────
 function buildPayload() {
   const dobStr = document.getElementById('dob').value;
   const phone  = document.getElementById('phone').value.trim();
@@ -857,10 +890,9 @@ function buildPayload() {
   return payload;
 }
 
-// ── CREATE PATIENT ─────────────────────────────────────────────
+// ── CREATE PATIENT ────────────────────────────────────────────
 async function createPatient(payload) {
   slog('[CREATE] POST /api/v1/patient-channels');
-  slog(`[CREATE] Payload: ${JSON.stringify(payload)}`);
   const r = await fetch(resolveApiBase('/api/v1/patient-channels'), {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${id_token}`, 'Content-Type': 'application/json' },
@@ -871,7 +903,7 @@ async function createPatient(payload) {
   return r.json();
 }
 
-// ── UPLOAD ATTACHMENT ──────────────────────────────────────────
+// ── UPLOAD ATTACHMENT ─────────────────────────────────────────
 async function uploadAttachment(pid, file) {
   const fd = new FormData();
   fd.append('file', file);
@@ -884,11 +916,10 @@ async function uploadAttachment(pid, file) {
   let body; try { body = JSON.parse(bodyText); } catch {}
   if (body) slog(`[ATTACH RESPONSE] ${JSON.stringify(body)}`);
   if (!r.ok) throw new Error(`Attachment failed ${r.status}: ${bodyText.substring(0,200)}`);
-  slog(`[ATTACH SUCCESS] ID: ${body?.id || 'n/a'}`);
   return body;
 }
 
-// ── SUBMIT ─────────────────────────────────────────────────────
+// ── SUBMIT ────────────────────────────────────────────────────
 async function saveRecord() {
   if (!validate()) return;
   const btn = document.getElementById('saveBtn');
@@ -899,12 +930,11 @@ async function saveRecord() {
     const patient = await createPatient(buildPayload());
     const pid = patient.id || patient.patient_id;
     slog(`[CREATE SUCCESS] Patient ID: ${pid}`);
-    const allImgs = [...imgs.patient.map(f=>({f,tag:'patient'})), ...imgs.belongings.map(f=>({f,tag:'belongings'}))];
     if (allImgs.length) {
       setP(30, `Uploading ${allImgs.length} image(s)…`, 'Step 2 of 3');
       for (let i = 0; i < allImgs.length; i++) {
         setP(30 + Math.round(((i+1)/allImgs.length)*55), `Uploading ${i+1}/${allImgs.length}…`, 'Step 2 of 3');
-        try { await uploadAttachment(pid, allImgs[i].f); }
+        try { await uploadAttachment(pid, allImgs[i]); }
         catch (e) { slog(`[IMAGE ${i+1} SKIPPED] ${e.message}`, true); }
       }
     } else {
@@ -925,7 +955,7 @@ async function saveRecord() {
   }
 }
 
-// ── CLEAR FORM ─────────────────────────────────────────────────
+// ── CLEAR FORM ────────────────────────────────────────────────
 function clearForm() {
   if (!confirm('Clear all form data?')) return;
   ['firstName','lastName','dob','age','phone','address','city','state','zip','cc']
@@ -935,7 +965,7 @@ function clearForm() {
   document.getElementById('ageHint').textContent = 'Enter if DOB unknown.';
   document.getElementById('ccCount').textContent = '0';
   document.querySelectorAll('input[name="gender"]').forEach(r => r.checked = false);
-  imgs.patient = []; imgs.belongings = [];
+  allImgs.length = 0;
   document.getElementById('trow').innerHTML = '';
   document.getElementById('prevArea').style.display = 'none';
   updateNoImgNote();
