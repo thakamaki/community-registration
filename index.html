@@ -227,7 +227,7 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
     </div>
     <div class="bc-foot">
       <span class="bc-hint" id="bcHint">🔄 Starting camera…</span>
-      <button class="close-bc" id="bcCancelBtn" onclick="closeBarcodeScanner()">✕ Cancel</button>
+      <button class="close-bc" id="bcCancelBtn" onclick="assocScanMode=false;closeBarcodeScanner()">✕ Cancel</button>
     </div>
   </div>
 </div>
@@ -1065,6 +1065,7 @@ function applyScannedValue(val) {
     applyAssocScannedValue(val);
     return;
   }
+  assocScanMode = false;
   document.getElementById('wristbandId').value = val;
   const st = document.getElementById('scanStatus');
   st.textContent = `✅ ${val}`; st.className = 'scan-status ok';
@@ -1072,7 +1073,6 @@ function applyScannedValue(val) {
 }
 
 function closeBarcodeScanner() {
-  assocScanMode = false;
   document.getElementById('barcodeModal').classList.remove('open');
   if (bcScanLoop)    { clearInterval(bcScanLoop); bcScanLoop = null; }
   if (bcZxingReader) { try { bcZxingReader.reset(); } catch(e){} bcZxingReader = null; }
