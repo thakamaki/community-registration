@@ -889,13 +889,35 @@ async function createPatient(payload) {
 }
 
 // ── UPLOAD ATTACHMENT ─────────────────────────────────────────
-async function uploadAttachment(pid, file) {
+// Using POST /api/v2/attachments with Bearer token auth.
+// Required fields:
+//   owner_id   — the patient channel ID returned from createPatient()
+//   owner_type — integer constant for PATIENT (⚠ confirm value with API expert)
+//   file       — the image file (multipart/form-data)
+// Optional fields:
+//   suppress_alerts — false = notify team (default), true = silent upload
+//                     (⚠ confirm preferred value with API expert for bulk registration)
+const OWNER_TYPE_PATIENT = 3; // Confirmed: integer value for PATIENT foreign key type
+
+// suppress_alerts pattern recommended by Pulsara:
+//   false on the first attachment → fires one notification to the care team
+//   true on all subsequent attachments → avoids spamming for bulk uploads
+async function uploadAttachment(pid, file, suppressAlerts) {
   const fd = new FormData();
-  fd.append('file', file);
-  slog(`[ATTACH] Patient ${pid} | ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
-  const r = await fetch(resolveApiBase(`/api/v1/patient-channels/${pid}/attachments?alert=true`), {
-    method: 'POST', headers: { 'Authorization': `Bearer ${id_token}` }, body: fd
+  fd.append('owner_id',        pid);
+  fd.append('owner_type',      OWNER_TYPE_PATIENT);
+  fd.append('file',            file);
+  fd.append('suppress_alerts', suppressAlerts ? 'true' : 'false');
+
+  slog(`[ATTACH] POST /api/v2/attachments | Patient ${pid} | ${file.name} (${(file.size/1024).toFixed(1)} KB) | suppress_alerts=${suppressAlerts}`);
+
+  const r = await fetch(resolveApiBase('/api/v2/attachments'), {
+    method:  'POST',
+    headers: { 'Authorization': `Bearer ${id_token}` },
+    // ⚠ Do NOT manually set Content-Type — browser must set multipart/form-data + boundary
+    body: fd
   });
+
   slog(`[ATTACH STATUS] ${r.status}`);
   const bodyText = await r.text();
   let body; try { body = JSON.parse(bodyText); } catch {}
