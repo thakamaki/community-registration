@@ -404,7 +404,7 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
           </div>
           <div class="field">
             <label id="lblPhone">Phone</label>
-            <input type="tel" id="phone" placeholder="(555) 000-0000" autocomplete="tel"/>
+            <input type="tel" id="phone" placeholder="(555) 000-0000" autocomplete="tel" oninput="updateNarrativePreview()"/>
           </div>
         </div>
         <div class="mt">
@@ -426,22 +426,22 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
       <div class="card-body">
         <div class="field">
           <label id="lblStreet">Street Address</label>
-          <input type="text" id="address" placeholder="123 Main St" autocomplete="street-address"/>
+          <input type="text" id="address" placeholder="123 Main St" autocomplete="street-address" oninput="updateNarrativePreview()"/>
         </div>
         <div class="g3 mt">
           <div class="field s2">
             <label id="lblCity">City</label>
-            <input type="text" id="city" placeholder="City" autocomplete="address-level2"/>
+            <input type="text" id="city" placeholder="City" autocomplete="address-level2" oninput="updateNarrativePreview()"/>
           </div>
           <div class="field">
             <label id="lblState">State</label>
-            <input type="text" id="state" placeholder="ST" maxlength="2" autocomplete="address-level1"/>
+            <input type="text" id="state" placeholder="ST" maxlength="2" autocomplete="address-level1" oninput="updateNarrativePreview()"/>
           </div>
         </div>
         <div class="g2 mt">
           <div class="field">
             <label id="lblZip">ZIP Code</label>
-            <input type="text" id="zip" placeholder="00000" maxlength="10" autocomplete="postal-code"/>
+            <input type="text" id="zip" placeholder="00000" maxlength="10" autocomplete="postal-code" oninput="updateNarrativePreview()"/>
           </div>
         </div>
       </div>
@@ -456,11 +456,18 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
           <div class="cc-wrap">
             <textarea id="cc" rows="3" maxlength="255"
               placeholder="Describe the primary concern or reason for registration…"
-              oninput="document.getElementById('ccCount').textContent=this.value.length"
+              oninput="document.getElementById('ccCount').textContent=this.value.length;updateNarrativePreview()"
               style="resize:vertical;width:100%;"></textarea>
             <span class="cc-count" id="ccCount">0</span>
           </div>
-          <span class="field-hint" id="hintCC">Max 255 characters. Phone, address, and associate person ID appended automatically.</span>
+          <span class="field-hint" id="hintCC">Max 255 characters. The fields below are appended automatically on submit.</span>
+        </div>
+        <!-- Live append preview -->
+        <div id="narrativePreview" style="margin-top:14px;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;display:none;">
+          <div style="background:var(--bg);padding:7px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+            <span style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">📎 Auto-Appended Fields (read-only preview)</span>
+          </div>
+          <div id="narrativePreviewRows" style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;"></div>
         </div>
       </div>
     </div>
@@ -975,7 +982,38 @@ const allImgs = [];
   applyLanguage('en');
 })();
 
-// ── REGISTRATION TYPE — show/hide Associate Person row ────────
+// ── NARRATIVE PREVIEW ─────────────────────────────────────────
+function updateNarrativePreview() {
+  const regType  = document.querySelector('input[name="regType"]:checked')?.value || '';
+  const phone    = document.getElementById('phone').value.trim();
+  const address  = document.getElementById('address').value.trim();
+  const city     = document.getElementById('city').value.trim();
+  const state    = document.getElementById('state').value.trim();
+  const zip      = document.getElementById('zip').value.trim();
+  const assocId  = document.getElementById('assocPersonId').value.trim();
+  const showAssoc = (regType === 'Pet' || regType === 'Belonging');
+
+  const addrParts = [address, city, state, zip].filter(Boolean).join(', ');
+
+  const rows = [];
+  if (regType)   rows.push({ icon: '🏷️', label: 'Registration Type', value: regType });
+  if (phone)     rows.push({ icon: '📞', label: 'Phone',              value: phone });
+  if (addrParts) rows.push({ icon: '📍', label: 'Address',            value: addrParts });
+  if (showAssoc && assocId) rows.push({ icon: '🔗', label: 'Associate Person ID', value: assocId });
+
+  const panel = document.getElementById('narrativePreview');
+  const container = document.getElementById('narrativePreviewRows');
+
+  if (!rows.length) { panel.style.display = 'none'; return; }
+
+  panel.style.display = 'block';
+  container.innerHTML = rows.map(r => `
+    <div style="display:flex;align-items:baseline;gap:8px;font-size:.82rem;">
+      <span style="min-width:16px;">${r.icon}</span>
+      <span style="font-weight:700;color:var(--muted);min-width:140px;">${r.label}:</span>
+      <span style="color:var(--text);">${r.value}</span>
+    </div>`).join('');
+}
 function onRegTypeChange() {
   const val = document.querySelector('input[name="regType"]:checked')?.value || 'Person';
   const row = document.getElementById('assocPersonRow');
@@ -987,6 +1025,7 @@ function onRegTypeChange() {
     const st = document.getElementById('assocSt');
     st.textContent = ''; st.className = 'scan-status';
   }
+  updateNarrativePreview();
 }
 
 function updateAssocSt() {
@@ -994,6 +1033,7 @@ function updateAssocSt() {
   const st = document.getElementById('assocSt');
   if (v) { st.textContent = `✓ ${v}`; st.className = 'scan-status ok'; }
   else   { st.textContent = ''; st.className = 'scan-status'; }
+  updateNarrativePreview();
 }
 
 // ── ASSOCIATE PERSON SCANNER ──────────────────────────────────
