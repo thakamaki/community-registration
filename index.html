@@ -897,6 +897,25 @@ function applyLanguage(lang) {
 }
 </script>
 
+<!-- ZXING via ESM — works on iOS Safari, Chrome, Firefox, no CDN script tag needed -->
+<script type="module">
+  import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType, NotFoundException }
+    from 'https://esm.sh/@zxing/library@0.19.2';
+
+  // Expose to global scope so the main script can access it
+  window._ZXingReader = BrowserMultiFormatReader;
+  window._ZXingFormats = {
+    CODE_128: BarcodeFormat.CODE_128,
+    CODE_39:  BarcodeFormat.CODE_39,
+    CODE_93:  BarcodeFormat.CODE_93,
+    CODABAR:  BarcodeFormat.CODABAR
+  };
+  window._ZXingHintType   = DecodeHintType;
+  window._ZXingNotFoundException = NotFoundException;
+  window._zxingReady = true;
+  console.log('[ZXing] ESM module loaded successfully');
+</script>
+
 <!-- MAIN SCRIPT -->
 <script>
 const MOA_ED_PATIENT  = 5;
@@ -942,187 +961,106 @@ const allImgs = [];
 })();
 
 // ── BARCODE SCANNER ───────────────────────────────────────────
-// Strategy 1 (modern): BarcodeDetector API — Chrome Android, Chrome desktop, Edge
-// Strategy 2 (fallback): canvas frame-grab → Shape Detection polyfill attempt
-// Strategy 3 (iOS/universal fallback): file input capture — native camera app
-// decodes the barcode via OS vision and the value is typed/pasted by the user,
-// OR we grab the image and run BarcodeDetector on the still frame if available.
-// This gives 95%+ coverage with zero external dependencies.
+// Uses ZXing ESM module (loaded above) for universal decode across
+// iOS Safari, Android Chrome, Firefox, and desktop browsers.
+// Falls back gracefully to manual entry if ZXing fails to load.
 
 let bcScanLoop = null;
+let bcZxingReader = null;
 
 async function openBarcodeScanner() {
   const t = T[currentLang] || T.en;
-
-  // ── Detect best strategy ──────────────────────────────────
-  const hasDetector = ('BarcodeDetector' in window);
-  let detector = null;
-
-  if (hasDetector) {
-    try {
-      const supported = await BarcodeDetector.getSupportedFormats();
-      const want = ['code_128','code_39','code_93','codabar'];
-      const avail = want.filter(f => supported.includes(f));
-      // Use whatever 1D formats are available; fall back to all formats if none match
-      detector = new BarcodeDetector({ formats: avail.length ? avail : supported });
-      slog(`[BARCODE] BarcodeDetector ready — formats: ${avail.length ? avail.join(',') : 'all'}`);
-    } catch(e) {
-      slog(`[BARCODE] BarcodeDetector init failed: ${e.message}`, true);
-    }
-  }
-
-  if (detector) {
-    // ── Strategy 1: Live viewfinder with BarcodeDetector ──
-    await openLiveScanner(detector, t);
-  } else {
-    // ── Strategy 2: Native camera capture fallback ─────────
-    // On iOS Safari and browsers without BarcodeDetector, trigger the
-    // native camera via a file input. The OS camera app can decode
-    // barcodes natively on iOS 16+ (Live Text) and most Android cameras.
-    // User scans → photo taken → we attempt to decode the still frame.
-    slog('[BARCODE] BarcodeDetector unavailable — using camera capture fallback');
-    openCaptureScanner(t);
-  }
-}
-
-// Strategy 1 — live video + BarcodeDetector polling
-async function openLiveScanner(detector, t) {
   document.getElementById('barcodeModal').classList.add('open');
   document.getElementById('bcHint').textContent = t.bcStarting;
 
+  // Wait up to 3s for ZXing ESM module to finish loading
+  let waited = 0;
+  while (!window._zxingReady && waited < 3000) {
+    await new Promise(r => setTimeout(r, 100));
+    waited += 100;
+  }
+
   try {
+    // Set up ZXing hints for 1D formats
+    const hints = new Map();
+    hints.set(window._ZXingHintType.POSSIBLE_FORMATS, [
+      window._ZXingFormats.CODE_128,
+      window._ZXingFormats.CODE_39,
+      window._ZXingFormats.CODE_93,
+      window._ZXingFormats.CODABAR
+    ]);
+
+    bcZxingReader = new window._ZXingReader(hints);
+
+    // Request camera stream
     bcStream = await navigator.mediaDevices.getUserMedia({
       video: isMobile
         ? { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
         : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
     });
+
     const vid = document.getElementById('bcVideo');
     vid.srcObject = bcStream;
     await vid.play();
     document.getElementById('bcHint').textContent = t.bcScanning;
 
-    // Poll every 250ms — fast enough for smooth UX, easy on CPU
-    bcScanLoop = setInterval(async () => {
-      if (vid.readyState < 2) return;
-      try {
-        const results = await detector.detect(vid);
-        if (results && results.length > 0) {
-          const val = results[0].rawValue;
-          slog(`[BARCODE] Detected: ${val} (${results[0].format})`);
-          clearInterval(bcScanLoop); bcScanLoop = null;
-          closeBarcodeScanner();
-          applyScannedValue(val);
-        }
-      } catch(e) { /* no barcode in frame — normal, keep polling */ }
-    }, 250);
-
-  } catch(e) {
-    const msg = e.name === 'NotAllowedError'
-      ? 'Camera permission denied — please allow access and try again.'
-      : e.name === 'NotFoundError'
-      ? 'No camera found on this device.'
-      : `Camera error: ${e.message}`;
-    toast(msg, 'error');
-    slog(`[BARCODE ERROR] ${e.name}: ${e.message}`, true);
-    closeBarcodeScanner();
-  }
-}
-
-// Strategy 2a — mobile: file input with capture="environment"
-// Opens the native rear camera on iOS/Android. After photo is taken,
-// decode the still frame via canvas + BarcodeDetector.
-function openCaptureScanner(t) {
-  if (!isMobile) {
-    // Desktop fallback: open live stream modal with manual entry footer
-    openDesktopFallbackScanner(t);
-    return;
-  }
-
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.capture = 'environment';
-  input.style.display = 'none';
-  document.body.appendChild(input);
-
-  input.onchange = async () => {
-    const file = input.files[0];
-    document.body.removeChild(input);
-    if (!file) return;
-
-    // Draw to canvas so BarcodeDetector can process the pixels
-    const bitmap = await createImageBitmap(file);
-    const canvas = document.createElement('canvas');
-    canvas.width  = bitmap.width;
-    canvas.height = bitmap.height;
-    canvas.getContext('2d').drawImage(bitmap, 0, 0);
-
-    // Try BarcodeDetector on the canvas (broader format list for best iOS hit rate)
-    if ('BarcodeDetector' in window) {
-      try {
-        const supported = await BarcodeDetector.getSupportedFormats();
-        const d = new BarcodeDetector({ formats: supported });
-        const results = await d.detect(canvas);
-        if (results && results.length > 0) {
-          slog(`[BARCODE] Still-frame: ${results[0].rawValue} (${results[0].format})`);
-          applyScannedValue(results[0].rawValue);
-          return;
-        }
-        slog('[BARCODE] Still-frame: no barcode detected in image', true);
-      } catch(e) { slog(`[BARCODE] Still-frame error: ${e.message}`, true); }
-    }
-
-    // Decode failed — show image preview + manual entry in modal
-    showManualEntryModal(URL.createObjectURL(file), t);
-  };
-
-  input.click();
-}
-
-// Strategy 2b — desktop fallback: live camera stream + manual entry footer
-// (desktop browsers don't support capture="environment" on file inputs)
-async function openDesktopFallbackScanner(t) {
-  document.getElementById('barcodeModal').classList.add('open');
-  document.getElementById('bcHint').textContent = t.bcStarting;
-
-  try {
-    bcStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
+    // ZXing continuously decodes frames from the live video element
+    bcZxingReader.decodeFromStream(bcStream, vid, (result, err) => {
+      if (result) {
+        const val = result.getText();
+        slog(`[BARCODE] Decoded: ${val} (${result.getBarcodeFormat()})`);
+        closeBarcodeScanner();
+        applyScannedValue(val);
+      }
+      // NotFoundException fires every frame with no barcode — that's normal, ignore it
     });
-    const vid = document.getElementById('bcVideo');
-    vid.srcObject = bcStream;
-    await vid.play();
-    document.getElementById('bcHint').textContent = '⚠ Auto-decode unavailable in this browser — type the barcode value below.';
-    showQuickEntryFooter(t);
+
+    slog('[BARCODE] ZXing live stream started');
+
   } catch(e) {
-    const msg = e.name === 'NotAllowedError' ? 'Camera permission denied.' : `Camera error: ${e.message}`;
-    toast(msg, 'error');
-    slog(`[BARCODE] Desktop fallback error: ${e.name}`, true);
-    closeBarcodeScanner();
+    slog(`[BARCODE ERROR] ${e.name}: ${e.message}`, true);
+
+    if (e.name === 'NotAllowedError') {
+      toast('Camera permission denied — please allow access and try again.', 'error');
+      closeBarcodeScanner();
+    } else if (e.name === 'NotFoundError') {
+      toast('No camera found on this device.', 'error');
+      closeBarcodeScanner();
+    } else if (!window._zxingReady) {
+      // ZXing didn't load — show manual entry with live camera if possible
+      toast('Decoder unavailable — type the value manually.', 'error');
+      showQuickEntryFooter(t);
+    } else {
+      toast(`Scanner error: ${e.message}`, 'error');
+      closeBarcodeScanner();
+    }
   }
 }
 
-// Show the modal with a captured image preview + manual type-in footer
-function showManualEntryModal(imgSrc, t) {
-  document.getElementById('barcodeModal').classList.add('open');
+function applyScannedValue(val) {
+  document.getElementById('wristbandId').value = val;
+  const st = document.getElementById('scanStatus');
+  st.textContent = `✅ ${val}`;
+  st.className = 'scan-status ok';
+  toast(`Wristband scanned: ${val}`, 'success');
+}
+
+function closeBarcodeScanner() {
+  document.getElementById('barcodeModal').classList.remove('open');
+  if (bcScanLoop)    { clearInterval(bcScanLoop); bcScanLoop = null; }
+  if (bcZxingReader) { try { bcZxingReader.reset(); } catch(e){} bcZxingReader = null; }
+  if (bcStream)      { bcStream.getTracks().forEach(t => t.stop()); bcStream = null; }
+  // Clean up any fallback UI
   const vid = document.getElementById('bcVideo');
-  vid.style.display = 'none';
-
-  let preview = document.getElementById('bcImgPreview');
-  if (!preview) {
-    preview = document.createElement('img');
-    preview.id = 'bcImgPreview';
-    preview.style.cssText = 'width:100%;max-height:300px;object-fit:contain;display:block;background:#000;';
-    vid.parentNode.insertBefore(preview, vid);
-  }
-  preview.src = imgSrc;
-  document.getElementById('bcHint').textContent = '⚠ Could not auto-decode — type the barcode value below, then press Enter or close.';
-  showQuickEntryFooter(t);
+  if (vid) vid.style.display = 'block';
+  const preview = document.getElementById('bcImgPreview');
+  if (preview) preview.remove();
+  const qi = document.getElementById('bcQuickInput');
+  if (qi) qi.remove();
 }
 
-// Inject a quick-entry text input into the modal footer
+// Manual entry footer — injected when auto-decode is unavailable
 function showQuickEntryFooter(t) {
   if (document.getElementById('bcQuickInput')) return;
   const qi = document.createElement('input');
@@ -1136,32 +1074,14 @@ function showQuickEntryFooter(t) {
       closeBarcodeScanner();
     }
   };
-  const foot = document.querySelector('.bc-foot');
-  foot.insertBefore(qi, foot.firstChild);
+  document.querySelector('.bc-foot').insertBefore(qi, document.querySelector('.bc-foot').firstChild);
   setTimeout(() => qi.focus(), 150);
 }
 
-function applyScannedValue(val) {
-  document.getElementById('wristbandId').value = val;
-  const st = document.getElementById('scanStatus');
-  st.textContent = `✅ ${val}`;
-  st.className = 'scan-status ok';
-  toast(`Wristband scanned: ${val}`, 'success');
-}
-
-function closeBarcodeScanner() {
-  document.getElementById('barcodeModal').classList.remove('open');
-  if (bcScanLoop) { clearInterval(bcScanLoop); bcScanLoop = null; }
-  if (bcStream)   { bcStream.getTracks().forEach(t => t.stop()); bcStream = null; }
-  // Clean up fallback elements if present
-  const vid = document.getElementById('bcVideo');
-  vid.style.display = 'block';
-  const preview = document.getElementById('bcImgPreview');
-  if (preview) preview.remove();
-  const quickInput = document.getElementById('bcQuickInput');
-  if (quickInput) quickInput.remove();
-  bcReader = null;
-}
+// These functions are no longer needed but kept as stubs to avoid reference errors
+function openCaptureScanner(t) { openBarcodeScanner(); }
+function openDesktopFallbackScanner(t) { openBarcodeScanner(); }
+function showManualEntryModal(src, t) { showQuickEntryFooter(t); }
 
 function onWristbandInput() {
   const v  = document.getElementById('wristbandId').value.trim();
