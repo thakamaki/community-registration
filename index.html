@@ -86,6 +86,38 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
   font-family:inherit;transition:background .2s;}
 .img-btn:hover{background:rgba(0,181,173,.12);}
 
+/* ── Config ID field with scan button ── */
+.scan-row{display:flex;gap:8px;align-items:stretch;}
+.scan-row input{flex:1;}
+.scan-btn{border:1.5px solid var(--teal);background:transparent;color:var(--teal-d);
+  border-radius:8px;padding:0 14px;font-size:.85rem;font-weight:700;cursor:pointer;
+  font-family:inherit;transition:background .2s;white-space:nowrap;display:flex;align-items:center;gap:6px;}
+.scan-btn:hover{background:rgba(0,181,173,.12);}
+.scan-btn:disabled{opacity:.45;cursor:not-allowed;}
+.scan-status{font-size:.73rem;font-weight:700;margin-top:4px;}
+.scan-status.scanning{color:var(--teal-d);}
+.scan-status.ok{color:var(--ok);}
+.scan-status.err{color:var(--red);}
+
+/* ── Barcode Scanner Modal ── */
+#barcodeModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;
+  align-items:center;justify-content:center;}
+#barcodeModal.open{display:flex;}
+.bc-box{background:var(--white);border-radius:14px;overflow:hidden;width:min(460px,95vw);}
+.bc-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;
+  font-weight:700;background:var(--teal);color:#fff;}
+.bc-sub{font-size:.78rem;opacity:.85;}
+.bc-video-wrap{position:relative;background:#000;}
+#bcVideo{width:100%;max-height:300px;object-fit:cover;display:block;}
+.bc-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+.bc-frame{width:70%;height:40%;border:2.5px solid var(--teal);border-radius:10px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.45);}
+.bc-foot{display:flex;gap:12px;align-items:center;justify-content:space-between;
+  padding:12px 16px;background:var(--bg);flex-wrap:wrap;}
+.bc-hint{font-size:.78rem;color:var(--muted);flex:1;}
+.close-bc{padding:9px 18px;border:none;background:var(--red);color:#fff;border-radius:8px;
+  cursor:pointer;font-weight:700;font-family:inherit;}
+
 /* ── Camera Modal ── */
 #camModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;
   align-items:center;justify-content:center;}
@@ -177,6 +209,24 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
 </head>
 <body>
 
+<!-- BARCODE SCANNER MODAL -->
+<div id="barcodeModal">
+  <div class="bc-box">
+    <div class="bc-head">
+      <span>🔍 Scan Config ID Barcode</span>
+      <span class="bc-sub">CODE-128 · CODE-39 · CODE-93 · CODABAR</span>
+    </div>
+    <div class="bc-video-wrap">
+      <video id="bcVideo" autoplay playsinline muted></video>
+      <div class="bc-overlay"><div class="bc-frame"></div></div>
+    </div>
+    <div class="bc-foot">
+      <span class="bc-hint" id="bcHint">🔄 Starting camera…</span>
+      <button class="close-bc" onclick="closeBarcodeScanner()">✕ Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- CAMERA MODAL -->
 <div id="camModal">
   <div class="cam-box">
@@ -187,7 +237,6 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
     <video id="camVideo" autoplay playsinline></video>
     <canvas id="camCanvas" style="display:none;"></canvas>
     <div class="cam-foot">
-      <!-- Flip button — only shown on mobile -->
       <button class="flip-btn" id="flipBtn" onclick="flipCamera()" title="Flip camera" style="display:none;">🔄</button>
       <button class="snap-btn" onclick="snapPhoto()">📸</button>
       <button class="close-cam" onclick="closeCamera()">✕ Close</button>
@@ -221,7 +270,6 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
   </div>
 </header>
 
-<!-- TABS — admin tab hidden by default, shown only for authenticated admins -->
 <div class="tab-bar" id="tabBar">
   <button class="tab-btn active" onclick="switchTab('reg',this)">📋 Registration Form</button>
   <button class="tab-btn" id="adminTabBtn" style="display:none;" onclick="switchTab('admin',this)">⚙️ Admin / Setup</button>
@@ -255,9 +303,35 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
       </div>
     </div>
 
-    <!-- Section 2 — Demographics -->
+    <!-- Section 2 — Wristband ID (posted to /identifiers with PATIENT_WRISTBAND_NUMBER category) -->
     <div class="card">
-      <div class="card-head"><div class="ch-ic">👤</div><h2>Patient Demographics</h2><span class="step">Section 2</span></div>
+      <div class="card-head">
+        <div class="ch-ic">🏷️</div>
+        <h2>Wristband ID</h2>
+        <span class="step">Section 2</span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>Wristband ID <span style="font-weight:400;text-transform:none;font-size:.72rem;">(posted to <code>/identifiers</code> · <code>PATIENT_WRISTBAND_NUMBER</code>)</span></label>
+          <div class="scan-row">
+            <input type="text" id="configId" placeholder="Type manually or scan barcode…" maxlength="100"
+              oninput="onConfigIdInput()"/>
+            <button class="scan-btn" id="scanBtn" onclick="openBarcodeScanner()" title="Scan 1D barcode">
+              <span>📷</span> Scan
+            </button>
+          </div>
+          <span class="scan-status" id="scanStatus"></span>
+          <span class="field-hint">
+            Accepts CODE-128, CODE-39, CODE-93, CODABAR · Powers "Scan to Find" / "Scan to Add" in Pulsara mobile.
+            Scan a 1D barcode or type the value manually.
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3 — Demographics -->
+    <div class="card">
+      <div class="card-head"><div class="ch-ic">👤</div><h2>Patient Demographics</h2><span class="step">Section 3</span></div>
       <div class="card-body">
         <div class="g2">
           <div class="field">
@@ -298,9 +372,9 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
       </div>
     </div>
 
-    <!-- Section 3 — Address -->
+    <!-- Section 4 — Address -->
     <div class="card">
-      <div class="card-head"><div class="ch-ic">📍</div><h2>Address</h2><span class="step">Section 3</span></div>
+      <div class="card-head"><div class="ch-ic">📍</div><h2>Address</h2><span class="step">Section 4</span></div>
       <div class="card-body">
         <div class="field">
           <label>Street Address</label>
@@ -325,9 +399,9 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
       </div>
     </div>
 
-    <!-- Section 4 — Narrative / Notes (maps to Chief Complaint behind the scenes) -->
+    <!-- Section 5 — Narrative / Notes -->
     <div class="card">
-      <div class="card-head"><div class="ch-ic">🩺</div><h2>Narrative / Notes</h2><span class="step">Section 4</span></div>
+      <div class="card-head"><div class="ch-ic">🩺</div><h2>Narrative / Notes</h2><span class="step">Section 5</span></div>
       <div class="card-body">
         <div class="field">
           <label>Narrative / Notes <span class="req">*</span></label>
@@ -343,9 +417,9 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
       </div>
     </div>
 
-    <!-- Section 5 — Photos -->
+    <!-- Section 6 — Photos -->
     <div class="card">
-      <div class="card-head"><div class="ch-ic">📷</div><h2>Photos</h2><span class="step">Section 5</span></div>
+      <div class="card-head"><div class="ch-ic">📷</div><h2>Photos</h2><span class="step">Section 6</span></div>
       <div class="card-body">
         <div class="img-actions">
           <button class="img-btn" onclick="openCamera()">📷 Take Photo</button>
@@ -365,11 +439,9 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
   </main>
 </div>
 
-<!-- ═══ TAB 2 — ADMIN / SETUP (hidden from QR users) ═══ -->
+<!-- ═══ TAB 2 — ADMIN / SETUP ═══ -->
 <div id="tab-admin" class="tab-pane">
   <div class="admin-wrap">
-
-    <!-- API Environment -->
     <div class="card">
       <div class="card-head"><div class="ch-ic">🌐</div><h2>API Environment</h2></div>
       <div class="card-body">
@@ -380,17 +452,13 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
             <option value="https://api.pulsara.com">Production</option>
           </select>
         </div>
-        <p style="font-size:.78rem;color:var(--muted);">
-          All API calls are proxied through Vercel (<code>/api/pulsara/…</code>) — no CORS issues.
-        </p>
+        <p style="font-size:.78rem;color:var(--muted);">All API calls are proxied through Vercel (<code>/api/pulsara/…</code>) — no CORS issues.</p>
       </div>
     </div>
 
-    <!-- Authentication -->
     <div class="card">
       <div class="card-head">
-        <div class="ch-ic">🔑</div>
-        <h2>Authentication</h2>
+        <div class="ch-ic">🔑</div><h2>Authentication</h2>
         <span id="authBadge" class="auth-status out" style="margin-left:auto;">🔴 Not Logged In</span>
       </div>
       <div class="card-body">
@@ -412,33 +480,24 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
       </div>
     </div>
 
-    <!-- Incident Setup & QR -->
     <div class="card">
       <div class="card-head"><div class="ch-ic">🔗</div><h2>Incident Setup &amp; QR Code</h2><span class="step">Step 3</span></div>
       <div class="card-body">
-        <p style="font-size:.83rem;color:var(--muted);margin-bottom:16px;">
-          Set the active Incident ID for this collection point. Generate a QR code that pre-fills and authorizes the registration form — or push the ID directly to this session's form.
-        </p>
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:16px;">Set the active Incident ID for this collection point. Generate a QR code or push to this session.</p>
         <div class="g2">
           <div class="field">
             <label>Active Incident ID <span class="req">*</span></label>
             <input type="text" id="adminIncident" placeholder="e.g. 14573" maxlength="20" oninput="onIncidentChange()"/>
-            <span class="field-hint">EMS agency incident. Required to generate QR or push to form.</span>
           </div>
           <div class="field">
             <label>Collection Point Label <span style="font-weight:400;text-transform:none;">(optional)</span></label>
             <input type="text" id="cpLabel" placeholder="e.g. North High School Gym" oninput="onIncidentChange()"/>
-            <span class="field-hint">Printed on QR sheet for responders.</span>
           </div>
         </div>
         <div class="btn-row" style="margin-top:18px;">
-          <button class="btn-save" onclick="generateQR()" style="padding:11px 24px;font-size:.9rem;">
-            📱 Generate QR Code
-          </button>
+          <button class="btn-save" onclick="generateQR()" style="padding:11px 24px;font-size:.9rem;">📱 Generate QR Code</button>
           <button class="btn-secondary" onclick="pushIncidentToForm()">→ Push to Registration Form</button>
         </div>
-
-        <!-- QR Result Panel -->
         <div class="qr-panel" id="qrPanel" style="display:none;">
           <h3>📱 QR Code — Share with Registrants</h3>
           <div class="qr-inner">
@@ -451,18 +510,13 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
                 <button class="qr-btn" onclick="downloadQR()">⬇ Download PNG</button>
                 <button class="qr-btn" onclick="printQR()">🖨 Print Sheet</button>
               </div>
-              <p class="qr-note">
-                ⚠️ The QR code encodes a session token that authorizes form submission. 
-                Treat it like a password — distribute only to authorized collection point staff.<br>
-                Token expires when you log out or regenerate.
-              </p>
+              <p class="qr-note">⚠️ The QR code encodes a session token. Treat it like a password.</p>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Activity Log -->
     <div class="card">
       <div class="card-head">
         <div class="ch-ic">📋</div><h2>Activity Log</h2>
@@ -473,7 +527,6 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
         <div class="log-box" id="logBox">Ready. Log in to begin.</div>
       </div>
     </div>
-
   </div>
 </div>
 
@@ -482,20 +535,12 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
 function renderQR(text, canvasEl) {
   const sz = 180;
   const url = `https://api.qrserver.com/v1/create-qr-code/?size=${sz}x${sz}&data=${encodeURIComponent(text)}&format=png&margin=10&ecc=M`;
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    const ctx = canvasEl.getContext('2d');
-    ctx.clearRect(0, 0, sz, sz);
-    ctx.drawImage(img, 0, 0, sz, sz);
-  };
+  const img = new Image(); img.crossOrigin = 'anonymous';
+  img.onload = () => { const c = canvasEl.getContext('2d'); c.clearRect(0,0,sz,sz); c.drawImage(img,0,0,sz,sz); };
   img.onerror = () => {
-    const ctx = canvasEl.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,sz,sz);
-    ctx.fillStyle = '#e53935'; ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center';
-    ctx.fillText('⚠ QR unavailable', sz/2, sz/2 - 8);
-    ctx.font = '10px Arial'; ctx.fillStyle = '#607d8b';
-    ctx.fillText('(check internet)', sz/2, sz/2 + 10);
+    const c = canvasEl.getContext('2d'); c.fillStyle='#fff'; c.fillRect(0,0,sz,sz);
+    c.fillStyle='#e53935'; c.font='bold 13px Arial'; c.textAlign='center';
+    c.fillText('⚠ QR unavailable',sz/2,sz/2-8);
   };
   img.src = url;
 }
@@ -510,12 +555,19 @@ const CLIENT_IDS = {
   'https://api.pulsara.com':              'pulsara:client:prod'
 };
 
+// Pulsara-supported 1D barcode types (matches SIMPLE_BARCODE_TYPES in the platform source)
+// BarcodeDetector format strings mapped from Pulsara's domain constants:
+//   CODABAR → 'codabar', CODE_39 → 'code_39', CODE_93 → 'code_93', CODE_128 → 'code_128'
+const BC_FORMATS = ['codabar','code_39','code_93','code_128'];
+
 let id_token   = null;
 let camStream  = null;
+let bcStream   = null;
+let bcDetector = null;
+let bcLoop     = null;
 let currentFacingMode = 'environment';
 let isMobile   = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-
-const allImgs = [];
+const allImgs  = [];
 
 // ── INIT ──────────────────────────────────────────────────────
 (function init() {
@@ -526,29 +578,106 @@ const allImgs = [];
   document.getElementById('createdAt').value    = now.toISOString();
 
   const p = new URLSearchParams(location.search);
-
-  // QR deep-link: hide admin tab entirely
-  const isQRUser = p.has('ref');
-  if (!isQRUser) {
-    document.getElementById('adminTabBtn').style.display = '';
-  }
-
-  if (p.has('incident')) {
-    document.getElementById('incidentId').value = p.get('incident');
-    updateIncSt();
-  }
+  if (!p.has('ref')) document.getElementById('adminTabBtn').style.display = '';
+  if (p.has('incident')) { document.getElementById('incidentId').value = p.get('incident'); updateIncSt(); }
   if (p.has('cp')) {
     const b = document.getElementById('bannerText');
     if (b) b.innerHTML += ` &nbsp;|&nbsp; 📍 <strong>${p.get('cp')}</strong>`;
   }
   if (p.has('ref')) {
-    try {
-      id_token = atob(p.get('ref'));
-      updateAuthBadge();
-      slog('[QR AUTH] Session token loaded from QR link.');
-    } catch(e) { slog('[QR AUTH] Invalid token in URL.', true); }
+    try { id_token = atob(p.get('ref')); updateAuthBadge(); slog('[QR AUTH] Token loaded.'); }
+    catch(e) { slog('[QR AUTH] Invalid token.', true); }
   }
+
+  // Check BarcodeDetector availability and update scan button
+  checkBarcodeSupport();
 })();
+
+// ── BARCODE DETECTOR SUPPORT CHECK ───────────────────────────
+async function checkBarcodeSupport() {
+  const btn = document.getElementById('scanBtn');
+  if (!('BarcodeDetector' in window)) {
+    btn.disabled = true;
+    btn.title = 'BarcodeDetector API not supported in this browser. Use Chrome on Android or Chrome desktop.';
+    document.getElementById('scanStatus').textContent = '⚠ Barcode scanning not supported in this browser — manual entry only.';
+    document.getElementById('scanStatus').className = 'scan-status err';
+    return;
+  }
+  try {
+    const supported = await BarcodeDetector.getSupportedFormats();
+    const available = BC_FORMATS.filter(f => supported.includes(f));
+    if (!available.length) {
+      btn.disabled = true;
+      document.getElementById('scanStatus').textContent = '⚠ No supported 1D barcode formats on this device.';
+      document.getElementById('scanStatus').className = 'scan-status err';
+    } else {
+      bcDetector = new BarcodeDetector({ formats: available });
+      document.getElementById('scanStatus').textContent = `✓ Scanner ready — supports: ${available.join(', ')}`;
+      document.getElementById('scanStatus').className = 'scan-status ok';
+    }
+  } catch(e) {
+    btn.disabled = true;
+    document.getElementById('scanStatus').textContent = '⚠ Scanner init failed — manual entry only.';
+    document.getElementById('scanStatus').className = 'scan-status err';
+  }
+}
+
+// ── BARCODE SCANNER ───────────────────────────────────────────
+async function openBarcodeScanner() {
+  if (!bcDetector) { toast('Scanner unavailable — type manually', 'error'); return; }
+  document.getElementById('barcodeModal').classList.add('open');
+  document.getElementById('bcHint').textContent = '🔄 Starting camera…';
+  try {
+    const constraints = {
+      video: isMobile
+        ? { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        : { width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    };
+    bcStream = await navigator.mediaDevices.getUserMedia(constraints);
+    const vid = document.getElementById('bcVideo');
+    vid.srcObject = bcStream;
+    await vid.play();
+    document.getElementById('bcHint').textContent = '📸 Point at a 1D barcode…';
+    startBarcodeLoop(vid);
+  } catch(e) {
+    toast('Camera unavailable for scanning', 'error');
+    closeBarcodeScanner();
+  }
+}
+
+function startBarcodeLoop(vid) {
+  // Poll every 200 ms — matches ML Kit's continuous scanning cadence
+  bcLoop = setInterval(async () => {
+    if (!bcDetector || vid.readyState < 2) return;
+    try {
+      const results = await bcDetector.detect(vid);
+      if (results && results.length > 0) {
+        const val = results[0].rawValue;
+        clearInterval(bcLoop); bcLoop = null;
+        closeBarcodeScanner();
+        document.getElementById('configId').value = val;
+        document.getElementById('scanStatus').textContent = `✅ Scanned: ${val}`;
+        document.getElementById('scanStatus').className = 'scan-status ok';
+        toast(`Config ID scanned: ${val}`, 'success');
+        slog(`[BARCODE SCAN] Value: ${val} | Format: ${results[0].format}`);
+      }
+    } catch(e) { /* ignore detect errors during scanning */ }
+  }, 200);
+}
+
+function closeBarcodeScanner() {
+  document.getElementById('barcodeModal').classList.remove('open');
+  if (bcLoop) { clearInterval(bcLoop); bcLoop = null; }
+  if (bcStream) { bcStream.getTracks().forEach(t => t.stop()); bcStream = null; }
+}
+
+function onConfigIdInput() {
+  const v = document.getElementById('configId').value.trim();
+  const st = document.getElementById('scanStatus');
+  if (v) { st.textContent = `✓ Config ID: ${v}`; st.className = 'scan-status ok'; }
+  else   { st.textContent = ''; st.className = 'scan-status'; }
+}
 
 // ── ENV / PROXY ────────────────────────────────────────────────
 function apiHost()  { return document.getElementById('envSel').value; }
@@ -610,7 +739,7 @@ function calcAge() {
     let age = now.getFullYear() - dob.getFullYear();
     const m = now.getMonth() - dob.getMonth();
     if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
-    ageEl.value    = age >= 0 ? age : '';
+    ageEl.value = age >= 0 ? age : '';
     ageEl.disabled = true; ageEl.style.opacity = '.5';
     hint.textContent = 'Calculated from DOB.';
   } else {
@@ -619,7 +748,7 @@ function calcAge() {
   }
 }
 
-// ── CAMERA ───────────────────────────────────────────────────
+// ── CAMERA (Photos) ───────────────────────────────────────────
 async function openCamera() {
   currentFacingMode = 'environment';
   document.getElementById('camTypeLabel').textContent = 'Photo';
@@ -631,18 +760,13 @@ async function openCamera() {
 async function startCameraStream(facingMode) {
   if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
   try {
-    const constraints = isMobile
-      ? { video: { facingMode: { ideal: facingMode } }, audio: false }
-      : { video: true, audio: false };
-    const s = await navigator.mediaDevices.getUserMedia(constraints);
+    const s = await navigator.mediaDevices.getUserMedia(
+      isMobile ? { video: { facingMode: { ideal: facingMode } }, audio: false } : { video: true, audio: false }
+    );
     camStream = s;
     const vid = document.getElementById('camVideo');
-    vid.srcObject = s;
-    await vid.play();
-  } catch(e) {
-    toast('Camera unavailable', 'error');
-    closeCamera();
-  }
+    vid.srcObject = s; await vid.play();
+  } catch(e) { toast('Camera unavailable', 'error'); closeCamera(); }
 }
 
 async function flipCamera() {
@@ -670,10 +794,7 @@ function snapPhoto() {
 }
 
 function handleFiles(input) {
-  Array.from(input.files).forEach(file => {
-    addThumb(URL.createObjectURL(file));
-    allImgs.push(file);
-  });
+  Array.from(input.files).forEach(file => { addThumb(URL.createObjectURL(file)); allImgs.push(file); });
   updateNoImgNote();
   input.value = '';
 }
@@ -702,27 +823,20 @@ function updateNoImgNote() {
 }
 
 // ── INCIDENT / QR ─────────────────────────────────────────────
-function onIncidentChange() {
-  document.getElementById('qrPanel').style.display = 'none';
-}
+function onIncidentChange() { document.getElementById('qrPanel').style.display = 'none'; }
 
 function generateQR() {
   const inc = document.getElementById('adminIncident').value.trim();
   if (!inc) { toast('Enter an Incident ID first', 'error'); return; }
-  if (!id_token) { toast('Log in first — token is required for QR', 'error'); return; }
-
-  const cp   = document.getElementById('cpLabel').value.trim();
-  // QR URL uses ?ref= param — this causes admin tab to be hidden on load
+  if (!id_token) { toast('Log in first — token required for QR', 'error'); return; }
+  const cp = document.getElementById('cpLabel').value.trim();
   const base = window.location.href.split('?')[0].split('#')[0];
-  const encodedToken = btoa(id_token);
-
-  let url = `${base}?incident=${encodeURIComponent(inc)}&ref=${encodeURIComponent(encodedToken)}`;
+  let url = `${base}?incident=${encodeURIComponent(inc)}&ref=${encodeURIComponent(btoa(id_token))}`;
   if (cp) url += `&cp=${encodeURIComponent(cp)}`;
-
   document.getElementById('qrUrl').textContent = url;
   document.getElementById('qrPanel').style.display = 'block';
   renderQR(url, document.getElementById('qrCanvas'));
-  slog(`[QR] Generated for incident ${inc}${cp ? ` @ ${cp}` : ''} · URL length: ${url.length}`);
+  slog(`[QR] Generated for incident ${inc}${cp ? ` @ ${cp}` : ''}`);
   toast('QR code generated', 'success');
 }
 
@@ -731,53 +845,39 @@ function pushIncidentToForm() {
   if (!inc) { toast('Enter an Incident ID first', 'error'); return; }
   document.getElementById('incidentId').value = inc;
   updateIncSt();
-  const regBtn = document.querySelectorAll('.tab-btn')[0];
-  switchTab('reg', regBtn);
+  switchTab('reg', document.querySelectorAll('.tab-btn')[0]);
   toast('Incident ID pushed to registration form', 'success');
-  slog(`[PUSH] Incident ${inc} pushed to Registration Form`);
 }
 
 function copyQrUrl() {
   navigator.clipboard.writeText(document.getElementById('qrUrl').textContent)
-    .then(() => toast('URL copied!', 'success'))
-    .catch(() => toast('Copy failed — select and copy manually', 'error'));
+    .then(() => toast('URL copied!', 'success')).catch(() => toast('Copy failed', 'error'));
 }
 
 function downloadQR() {
-  const canvas = document.getElementById('qrCanvas');
   const a = document.createElement('a');
   a.download = `pulsara-qr-incident-${document.getElementById('adminIncident').value.trim()}.png`;
-  a.href = canvas.toDataURL('image/png');
+  a.href = document.getElementById('qrCanvas').toDataURL('image/png');
   a.click();
 }
 
 function printQR() {
-  const inc    = document.getElementById('adminIncident').value.trim();
-  const cp     = document.getElementById('cpLabel').value.trim() || 'Collection Point';
-  const url    = document.getElementById('qrUrl').textContent;
-  const canvas = document.getElementById('qrCanvas');
+  const inc = document.getElementById('adminIncident').value.trim();
+  const cp  = document.getElementById('cpLabel').value.trim() || 'Collection Point';
+  const url = document.getElementById('qrUrl').textContent;
   const w = window.open('', '_blank');
   w.document.write(`<!DOCTYPE html><html><head><title>Registration QR · ${cp}</title>
-  <style>
-    body{font-family:Arial,sans-serif;text-align:center;padding:48px;background:#fff;}
-    h1{font-size:26px;color:#007b75;margin-bottom:4px;}
-    h2{font-size:16px;color:#1a2233;margin-bottom:20px;font-weight:400;}
-    img{border:3px solid #007b75;border-radius:10px;margin:0 auto 16px;display:block;}
-    .inst{font-size:14px;color:#455a64;max-width:320px;margin:0 auto 16px;}
-    .url{font-size:9px;color:#9e9e9e;word-break:break-all;max-width:400px;margin:0 auto;}
-    .inc{font-size:13px;color:#00b5ad;font-weight:700;margin-top:14px;}
-    .warn{font-size:11px;color:#e53935;margin-top:12px;}
-  </style></head><body>
-  <h1>🛡️ Disaster Registration</h1>
-  <h2>${cp}</h2>
-  <img src="${canvas.toDataURL('image/png')}" width="220" height="220"/>
-  <p class="inst"><strong>Scan to register</strong><br/>Use your phone camera to scan the QR code and fill out the registration form.</p>
-  ${inc ? `<p class="inc">Incident ID: ${inc}</p>` : ''}
+  <style>body{font-family:Arial,sans-serif;text-align:center;padding:48px;}
+  h1{font-size:26px;color:#007b75;}img{border:3px solid #007b75;border-radius:10px;}
+  .url{font-size:9px;color:#9e9e9e;word-break:break-all;max-width:400px;margin:0 auto;}
+  .warn{font-size:11px;color:#e53935;margin-top:12px;}</style></head><body>
+  <h1>🛡️ Disaster Registration</h1><h2>${cp}</h2>
+  <img src="${document.getElementById('qrCanvas').toDataURL('image/png')}" width="220" height="220"/>
+  <p><strong>Scan to register</strong></p>
+  ${inc ? `<p style="color:#00b5ad;font-weight:700;">Incident ID: ${inc}</p>` : ''}
   <p class="url">${url}</p>
-  <p class="warn">⚠ For authorized staff use only — do not post publicly.</p>
-  </body></html>`);
-  w.document.close();
-  setTimeout(() => w.print(), 600);
+  <p class="warn">⚠ For authorized staff use only.</p></body></html>`);
+  w.document.close(); setTimeout(() => w.print(), 600);
 }
 
 // ── LOGIN / LOGOUT ────────────────────────────────────────────
@@ -788,35 +888,25 @@ async function doLogin() {
   slog(`[LOGIN] Attempting: ${user} @ ${apiHost()}`);
   try {
     const r = await fetch(resolveApiBase('/api/v2/oauth2/token'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: user, password: pass, grant_type: 'password', client_id: clientId(), scope: 'web:all' })
     });
-    slog(`[LOGIN] HTTP ${r.status} ${r.statusText}`);
+    slog(`[LOGIN] HTTP ${r.status}`);
     const bodyText = await r.text();
     let d; try { d = JSON.parse(bodyText); } catch { slog(`[LOGIN] Non-JSON: ${bodyText.substring(0,300)}`, true); toast(`Login failed: ${r.status}`, 'error'); return; }
-    slog(`[LOGIN RESPONSE] ${JSON.stringify(d)}`);
     if (d.id_token) {
-      id_token = d.id_token;
-      slog('✓ Login successful. Token saved.');
-      updateAuthBadge();
-      toast('Logged in successfully', 'success');
+      id_token = d.id_token; updateAuthBadge();
+      slog('✓ Login successful.'); toast('Logged in successfully', 'success');
     } else {
-      slog(`✗ Login rejected: ${JSON.stringify(d)}`, true);
-      toast('Login failed – see log', 'error');
+      slog(`✗ Login rejected: ${JSON.stringify(d)}`, true); toast('Login failed – see log', 'error');
     }
-  } catch (e) {
-    slog(`[LOGIN] Network error: ${e.message}`, true);
-    toast('Network error during login', 'error');
-  }
+  } catch(e) { slog(`[LOGIN] Network error: ${e.message}`, true); toast('Network error during login', 'error'); }
 }
 
 function doLogout() {
   id_token = null;
   document.getElementById('qrPanel').style.display = 'none';
-  updateAuthBadge();
-  slog('[LOGOUT] Token cleared.');
-  toast('Logged out', '');
+  updateAuthBadge(); slog('[LOGOUT] Token cleared.'); toast('Logged out', '');
 }
 
 // ── VALIDATION ────────────────────────────────────────────────
@@ -827,18 +917,17 @@ function validate() {
     if (!el.value.trim()) {
       el.focus(); el.classList.add('err');
       setTimeout(() => el.classList.remove('err'), 2500);
-      toast(`"${lbl}" is required`, 'error');
-      return false;
+      toast(`"${lbl}" is required`, 'error'); return false;
     }
   }
-  if (!id_token) {
-    toast('Not logged in — scan a valid QR code or contact admin', 'error');
-    return false;
-  }
+  if (!id_token) { toast('Not logged in — scan a valid QR code or contact admin', 'error'); return false; }
   return true;
 }
 
 // ── BUILD PAYLOAD ─────────────────────────────────────────────
+// Wristband ID is NOT included here — it is posted separately after channel creation
+// via POST /api/v1/patient-channels/<id>/identifiers with category PATIENT_WRISTBAND_NUMBER.
+// This is what powers "Scan to Find" / "Scan to Add" in the Pulsara mobile app.
 function buildPayload() {
   const dobStr = document.getElementById('dob').value;
   const phone  = document.getElementById('phone').value.trim();
@@ -888,36 +977,42 @@ async function createPatient(payload) {
   return r.json();
 }
 
-// ── UPLOAD ATTACHMENT ─────────────────────────────────────────
-// Using POST /api/v2/attachments with Bearer token auth.
-// Required fields:
-//   owner_id   — the patient channel ID returned from createPatient()
-//   owner_type — integer constant for PATIENT (⚠ confirm value with API expert)
-//   file       — the image file (multipart/form-data)
-// Optional fields:
-//   suppress_alerts — false = notify team (default), true = silent upload
-//                     (⚠ confirm preferred value with API expert for bulk registration)
-const OWNER_TYPE_PATIENT = 3; // Confirmed: integer value for PATIENT foreign key type
+// ── POST WRISTBAND IDENTIFIER ─────────────────────────────────
+// Uses POST /api/v1/patient-channels/<id>/identifiers
+// Category: PATIENT_WRISTBAND_NUMBER — this is what powers "Scan to Find" / "Scan to Add"
+// in the Pulsara mobile app (Service::PatientScan / TBL_PATIENT_EXTERNAL_IDS).
+// The type.id must match a PATIENT_WRISTBAND_NUMBER type configured for your entity.
+// ⚠ Confirm the correct type.id with your Pulsara admin — it is entity-specific.
+const WRISTBAND_IDENTIFIER_TYPE_ID = null; // TODO: set to your entity's wristband type ID
 
-// suppress_alerts pattern recommended by Pulsara:
-//   false on the first attachment → fires one notification to the care team
-//   true on all subsequent attachments → avoids spamming for bulk uploads
+async function postWristbandIdentifier(pid, value) {
+  if (!WRISTBAND_IDENTIFIER_TYPE_ID) {
+    slog('[WRISTBAND] ⚠ WRISTBAND_IDENTIFIER_TYPE_ID not set — skipping identifier post. Set this to your entity\'s PATIENT_WRISTBAND_NUMBER type ID.', true);
+    return;
+  }
+  slog(`[WRISTBAND] POST /api/v1/patient-channels/${pid}/identifiers | value: ${value} | type_id: ${WRISTBAND_IDENTIFIER_TYPE_ID}`);
+  const r = await fetch(resolveApiBase(`/api/v1/patient-channels/${pid}/identifiers`), {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${id_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value, type: { id: WRISTBAND_IDENTIFIER_TYPE_ID } })
+  });
+  slog(`[WRISTBAND STATUS] ${r.status}`);
+  const body = await r.json().catch(() => ({}));
+  slog(`[WRISTBAND RESPONSE] ${JSON.stringify(body)}`);
+  if (!r.ok) throw new Error(`Wristband identifier failed (${r.status}): ${JSON.stringify(body)}`);
+  return body;
+}
+
+// ── UPLOAD ATTACHMENT ─────────────────────────────────────────
+const OWNER_TYPE_PATIENT = 3;
 async function uploadAttachment(pid, file, suppressAlerts) {
   const fd = new FormData();
-  fd.append('owner_id',        pid);
-  fd.append('owner_type',      OWNER_TYPE_PATIENT);
-  fd.append('file',            file);
-  fd.append('suppress_alerts', suppressAlerts ? 'true' : 'false');
-
-  slog(`[ATTACH] POST /api/v2/attachments | Patient ${pid} | ${file.name} (${(file.size/1024).toFixed(1)} KB) | suppress_alerts=${suppressAlerts}`);
-
+  fd.append('owner_id', pid); fd.append('owner_type', OWNER_TYPE_PATIENT);
+  fd.append('file', file); fd.append('suppress_alerts', suppressAlerts ? 'true' : 'false');
+  slog(`[ATTACH] ${file.name} (${(file.size/1024).toFixed(1)} KB) | suppress=${suppressAlerts}`);
   const r = await fetch(resolveApiBase('/api/v2/attachments'), {
-    method:  'POST',
-    headers: { 'Authorization': `Bearer ${id_token}` },
-    // ⚠ Do NOT manually set Content-Type — browser must set multipart/form-data + boundary
-    body: fd
+    method: 'POST', headers: { 'Authorization': `Bearer ${id_token}` }, body: fd
   });
-
   slog(`[ATTACH STATUS] ${r.status}`);
   const bodyText = await r.text();
   let body; try { body = JSON.parse(bodyText); } catch {}
@@ -937,12 +1032,21 @@ async function saveRecord() {
     const patient = await createPatient(buildPayload());
     const pid = patient.id || patient.patient_id;
     slog(`[CREATE SUCCESS] Patient ID: ${pid}`);
+
+    // Step 1b — Post wristband identifier if provided
+    const wristbandVal = document.getElementById('configId').value.trim();
+    if (wristbandVal) {
+      setP(20, 'Posting wristband identifier…', 'Step 1b of 3');
+      try { await postWristbandIdentifier(pid, wristbandVal); }
+      catch(e) { slog(`[WRISTBAND SKIPPED] ${e.message}`, true); }
+    }
+
     if (allImgs.length) {
       setP(30, `Uploading ${allImgs.length} image(s)…`, 'Step 2 of 3');
       for (let i = 0; i < allImgs.length; i++) {
         setP(30 + Math.round(((i+1)/allImgs.length)*55), `Uploading ${i+1}/${allImgs.length}…`, 'Step 2 of 3');
-        try { await uploadAttachment(pid, allImgs[i]); }
-        catch (e) { slog(`[IMAGE ${i+1} SKIPPED] ${e.message}`, true); }
+        try { await uploadAttachment(pid, allImgs[i], i > 0); }
+        catch(e) { slog(`[IMAGE ${i+1} SKIPPED] ${e.message}`, true); }
       }
     } else {
       setP(85, 'No images to upload', 'Step 2 of 3');
@@ -953,25 +1057,25 @@ async function saveRecord() {
     document.getElementById('prog').classList.remove('open');
     toast(`Patient #${pid} created successfully`, 'success');
     slog(`[SUBMIT COMPLETE] Patient ID: ${pid}`);
-  } catch (e) {
+  } catch(e) {
     document.getElementById('prog').classList.remove('open');
     toast(`Submission failed: ${e.message}`, 'error');
     slog(`[SUBMIT FAILED] ${e.message}`, true);
-  } finally {
-    btn.disabled = false;
-  }
+  } finally { btn.disabled = false; }
 }
 
 // ── CLEAR FORM ────────────────────────────────────────────────
 function clearForm() {
   if (!confirm('Clear all form data?')) return;
-  ['firstName','lastName','dob','age','phone','address','city','state','zip','cc']
+  ['firstName','lastName','dob','age','phone','address','city','state','zip','cc','configId']
     .forEach(id => document.getElementById(id).value = '');
   const ageEl = document.getElementById('age');
   ageEl.disabled = false; ageEl.style.opacity = '1';
   document.getElementById('ageHint').textContent = 'Enter if DOB unknown.';
   document.getElementById('ccCount').textContent = '0';
   document.querySelectorAll('input[name="gender"]').forEach(r => r.checked = false);
+  document.getElementById('scanStatus').textContent = '';
+  document.getElementById('scanStatus').className = 'scan-status';
   allImgs.length = 0;
   document.getElementById('trow').innerHTML = '';
   document.getElementById('prevArea').style.display = 'none';
