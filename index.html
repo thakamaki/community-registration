@@ -314,12 +314,7 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
       <span class="inc-st" id="incSt">Enter Incident ID to begin</span>
     </div>
 
-    <!-- Associate Person ID bar — shown only for Pet / Belonging -->
-    <div class="inc-bar" id="assocPersonBar">
-      <label id="assocPersonLabel">🔗 Associate Person ID <span style="font-weight:400;text-transform:none;font-size:.72rem;">(optional)</span></label>
-      <input type="text" id="assocPersonId" placeholder="Patient ID of the owner/associated person" maxlength="40" oninput="updateAssocSt()"/>
-      <span class="inc-st" id="assocSt"></span>
-    </div>
+
 
     <!-- Section 1 — Timestamp -->
     <div class="card">
@@ -371,6 +366,20 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
             <label><input type="radio" name="regType" value="Belonging" onchange="onRegTypeChange()"/> <span id="rtBelonging">♿ Belonging</span></label>
           </div>
           <span class="field-hint" id="hintRegType">Select the type of registration. Appended to Narrative / Notes on submit.</span>
+        </div>
+        <!-- Associate Person ID — shown only for Pet / Belonging -->
+        <div id="assocPersonRow" style="display:none;margin-bottom:16px;">
+          <div class="field">
+            <label id="assocPersonLabel">🔗 Associate Person ID <span style="font-weight:400;text-transform:none;font-size:.72rem;">(optional)</span></label>
+            <div class="scan-row">
+              <input type="text" id="assocPersonId" placeholder="Scan or type the owner's wristband/patient ID…" maxlength="40" oninput="updateAssocSt()"/>
+              <button class="scan-btn" onclick="openAssocScanner()">
+                <span>📷</span> <span id="assocScanBtnTxt">Scan</span>
+              </button>
+            </div>
+            <span class="scan-status" id="assocSt"></span>
+            <span class="field-hint" id="assocPersonHint">Scan the owner's wristband to link this Pet/Belonging to a person in the narrative.</span>
+          </div>
         </div>
         <div class="g2">
           <div class="field">
@@ -966,24 +975,41 @@ const allImgs = [];
   applyLanguage('en');
 })();
 
-// ── REGISTRATION TYPE — show/hide Associate Person bar ────────
+// ── REGISTRATION TYPE — show/hide Associate Person row ────────
 function onRegTypeChange() {
   const val = document.querySelector('input[name="regType"]:checked')?.value || 'Person';
-  const bar = document.getElementById('assocPersonBar');
+  const row = document.getElementById('assocPersonRow');
   if (val === 'Pet' || val === 'Belonging') {
-    bar.classList.add('visible');
+    row.style.display = 'block';
   } else {
-    bar.classList.remove('visible');
+    row.style.display = 'none';
     document.getElementById('assocPersonId').value = '';
-    document.getElementById('assocSt').textContent = '';
+    const st = document.getElementById('assocSt');
+    st.textContent = ''; st.className = 'scan-status';
   }
 }
 
 function updateAssocSt() {
   const v  = document.getElementById('assocPersonId').value.trim();
   const st = document.getElementById('assocSt');
-  if (v) { st.textContent = `✓ ${v}`; st.classList.add('ok'); }
-  else   { st.textContent = ''; st.classList.remove('ok'); }
+  if (v) { st.textContent = `✓ ${v}`; st.className = 'scan-status ok'; }
+  else   { st.textContent = ''; st.className = 'scan-status'; }
+}
+
+// ── ASSOCIATE PERSON SCANNER ──────────────────────────────────
+// Reuses the same barcode modal; on decode, writes to assocPersonId instead of wristbandId
+let assocScanMode = false;
+
+async function openAssocScanner() {
+  assocScanMode = true;
+  await openBarcodeScanner();
+}
+
+function applyAssocScannedValue(val) {
+  document.getElementById('assocPersonId').value = val;
+  const st = document.getElementById('assocSt');
+  st.textContent = `✅ ${val}`; st.className = 'scan-status ok';
+  toast(`Associate Person ID scanned: ${val}`, 'success');
 }
 
 // ── BARCODE SCANNER ───────────────────────────────────────────
@@ -1034,6 +1060,11 @@ async function openBarcodeScanner() {
 }
 
 function applyScannedValue(val) {
+  if (assocScanMode) {
+    assocScanMode = false;
+    applyAssocScannedValue(val);
+    return;
+  }
   document.getElementById('wristbandId').value = val;
   const st = document.getElementById('scanStatus');
   st.textContent = `✅ ${val}`; st.className = 'scan-status ok';
@@ -1041,6 +1072,7 @@ function applyScannedValue(val) {
 }
 
 function closeBarcodeScanner() {
+  assocScanMode = false;
   document.getElementById('barcodeModal').classList.remove('open');
   if (bcScanLoop)    { clearInterval(bcScanLoop); bcScanLoop = null; }
   if (bcZxingReader) { try { bcZxingReader.reset(); } catch(e){} bcZxingReader = null; }
@@ -1475,9 +1507,10 @@ function clearForm() {
   document.querySelectorAll('input[name="gender"]').forEach(r => r.checked = false);
   const defType = document.querySelector('input[name="regType"][value="Person"]');
   if (defType) defType.checked = true;
-  // Hide associate person bar and clear its status
-  document.getElementById('assocPersonBar').classList.remove('visible');
-  document.getElementById('assocSt').textContent = '';
+  // Hide associate person row and clear its status
+  document.getElementById('assocPersonRow').style.display = 'none';
+  const assocSt = document.getElementById('assocSt');
+  assocSt.textContent = ''; assocSt.className = 'scan-status';
   const st = document.getElementById('scanStatus');
   st.textContent = ''; st.className = 'scan-status';
   allImgs.length = 0;
