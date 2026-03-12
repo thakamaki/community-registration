@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Community Registration Client · Pulsara</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.20.0/zxing.min.js"></script>
 <style>
 :root{
   --teal:#00b5ad;--teal-d:#009690;--teal-m:#007b75;
@@ -28,6 +29,14 @@ header{background:var(--white);border-bottom:1px solid var(--border);box-shadow:
   color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;}
 .tab-btn.active{color:var(--teal-d);border-bottom-color:var(--teal);}
 .tab-pane{display:none;}.tab-pane.active{display:block;}
+/* ── Language selector bar ── */
+.lang-bar{display:flex;align-items:center;gap:10px;padding:10px 24px;
+  background:var(--white);border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.lang-lbl{font-size:.78rem;font-weight:700;color:var(--muted);white-space:nowrap;}
+.lang-sel{border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;
+  font-size:.88rem;font-family:inherit;color:var(--text);background:var(--white);
+  cursor:pointer;min-width:180px;}
+.lang-sel:focus{outline:none;border-color:var(--teal);}
 .banner{display:flex;align-items:center;gap:10px;background:#e8f5fd;border-left:4px solid var(--teal);
   padding:12px 18px;margin:16px 24px 0;border-radius:0 8px 8px 0;font-size:.84rem;color:#1a4a6e;}
 main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
@@ -85,21 +94,16 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
   border-radius:8px;padding:9px 16px;font-size:.82rem;font-weight:700;cursor:pointer;
   font-family:inherit;transition:background .2s;}
 .img-btn:hover{background:rgba(0,181,173,.12);}
-
-/* ── Config ID field with scan button ── */
 .scan-row{display:flex;gap:8px;align-items:stretch;}
 .scan-row input{flex:1;}
 .scan-btn{border:1.5px solid var(--teal);background:transparent;color:var(--teal-d);
   border-radius:8px;padding:0 14px;font-size:.85rem;font-weight:700;cursor:pointer;
   font-family:inherit;transition:background .2s;white-space:nowrap;display:flex;align-items:center;gap:6px;}
 .scan-btn:hover{background:rgba(0,181,173,.12);}
-.scan-btn:disabled{opacity:.45;cursor:not-allowed;}
 .scan-status{font-size:.73rem;font-weight:700;margin-top:4px;}
-.scan-status.scanning{color:var(--teal-d);}
 .scan-status.ok{color:var(--ok);}
 .scan-status.err{color:var(--red);}
-
-/* ── Barcode Scanner Modal ── */
+/* ── Barcode Modal ── */
 #barcodeModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;
   align-items:center;justify-content:center;}
 #barcodeModal.open{display:flex;}
@@ -110,14 +114,14 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
 .bc-video-wrap{position:relative;background:#000;}
 #bcVideo{width:100%;max-height:300px;object-fit:cover;display:block;}
 .bc-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
-.bc-frame{width:70%;height:40%;border:2.5px solid var(--teal);border-radius:10px;
-  box-shadow:0 0 0 9999px rgba(0,0,0,.45);}
+.bc-frame{width:70%;height:45%;border:2.5px solid var(--teal);border-radius:10px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.5);}
+.bc-corners::before,.bc-corners::after{content:'';position:absolute;width:24px;height:24px;border-color:var(--teal);border-style:solid;}
 .bc-foot{display:flex;gap:12px;align-items:center;justify-content:space-between;
   padding:12px 16px;background:var(--bg);flex-wrap:wrap;}
 .bc-hint{font-size:.78rem;color:var(--muted);flex:1;}
 .close-bc{padding:9px 18px;border:none;background:var(--red);color:#fff;border-radius:8px;
   cursor:pointer;font-weight:700;font-family:inherit;}
-
 /* ── Camera Modal ── */
 #camModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;
   align-items:center;justify-content:center;}
@@ -134,7 +138,6 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
 .flip-btn{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--teal);background:transparent;color:var(--teal-d);font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;}
 .flip-btn:hover{background:rgba(0,181,173,.12);}
 .close-cam{padding:10px 20px;border:none;background:var(--red);color:#fff;border-radius:8px;cursor:pointer;font-weight:700;font-family:inherit;}
-
 #prog{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;
   align-items:center;justify-content:center;}
 #prog.open{display:flex;}
@@ -204,6 +207,7 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
   .hmain{padding:12px 16px;}
   main,.admin-wrap{padding:12px 14px 40px;}
   .qr-inner{flex-direction:column;align-items:center;}
+  .lang-bar{padding:8px 14px;}
 }
 </style>
 </head>
@@ -213,7 +217,7 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
 <div id="barcodeModal">
   <div class="bc-box">
     <div class="bc-head">
-      <span>🔍 Scan Config ID Barcode</span>
+      <span>🔍 <span id="bcTitle">Scan Wristband Barcode</span></span>
       <span class="bc-sub">CODE-128 · CODE-39 · CODE-93 · CODABAR</span>
     </div>
     <div class="bc-video-wrap">
@@ -222,16 +226,16 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
     </div>
     <div class="bc-foot">
       <span class="bc-hint" id="bcHint">🔄 Starting camera…</span>
-      <button class="close-bc" onclick="closeBarcodeScanner()">✕ Cancel</button>
+      <button class="close-bc" id="bcCancelBtn" onclick="closeBarcodeScanner()">✕ Cancel</button>
     </div>
   </div>
 </div>
 
-<!-- CAMERA MODAL -->
+<!-- CAMERA MODAL (photos) -->
 <div id="camModal">
   <div class="cam-box">
     <div class="cam-head">
-      <span>📷 Camera Capture</span>
+      <span>📷 <span id="camTitle">Camera Capture</span></span>
       <span class="ctype" id="camTypeLabel">Photo</span>
     </div>
     <video id="camVideo" autoplay playsinline></video>
@@ -239,7 +243,7 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
     <div class="cam-foot">
       <button class="flip-btn" id="flipBtn" onclick="flipCamera()" title="Flip camera" style="display:none;">🔄</button>
       <button class="snap-btn" onclick="snapPhoto()">📸</button>
-      <button class="close-cam" onclick="closeCamera()">✕ Close</button>
+      <button class="close-cam" id="camCloseBtn" onclick="closeCamera()">✕ Close</button>
     </div>
   </div>
 </div>
@@ -247,7 +251,7 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
 <!-- PROGRESS OVERLAY -->
 <div id="prog">
   <div class="prog-box">
-    <h3>Submitting to Pulsara</h3>
+    <h3 id="progTitle">Submitting to Pulsara</h3>
     <p id="progMsg">Creating patient channel…</p>
     <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
     <div class="prog-step" id="progStep">Step 1 of 3</div>
@@ -270,102 +274,119 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
   </div>
 </header>
 
+<!-- TABS -->
 <div class="tab-bar" id="tabBar">
-  <button class="tab-btn active" onclick="switchTab('reg',this)">📋 Registration Form</button>
+  <button class="tab-btn active" onclick="switchTab('reg',this)" id="tabRegBtn">📋 Registration Form</button>
   <button class="tab-btn" id="adminTabBtn" style="display:none;" onclick="switchTab('admin',this)">⚙️ Admin / Setup</button>
 </div>
 
 <!-- ═══ TAB 1 — REGISTRATION FORM ═══ -->
 <div id="tab-reg" class="tab-pane active">
+
+  <!-- Language selector — registration tab only -->
+  <div class="lang-bar">
+    <span class="lang-lbl" id="langLabel">🌐 Language:</span>
+    <select class="lang-sel" id="langSel" onchange="applyLanguage(this.value)">
+      <option value="en">🇺🇸 English</option>
+      <option value="es">🇪🇸 Español (Spanish)</option>
+      <option value="zh">🇨🇳 中文 (Chinese)</option>
+      <option value="tl">🇵🇭 Tagalog (Filipino)</option>
+      <option value="vi">🇻🇳 Tiếng Việt (Vietnamese)</option>
+      <option value="ar">🇸🇦 العربية (Arabic)</option>
+      <option value="fr">🇫🇷 Français (French)</option>
+      <option value="ko">🇰🇷 한국어 (Korean)</option>
+      <option value="ru">🇷🇺 Русский (Russian)</option>
+      <option value="ht">🇭🇹 Kreyòl Ayisyen (Haitian Creole)</option>
+    </select>
+  </div>
+
   <div class="banner">
     <span>ℹ️</span>
     <span id="bannerText">All information is securely transmitted to Pulsara. Fields marked <strong>*</strong> are required.</span>
   </div>
+
   <main>
     <!-- Incident bar -->
     <div class="inc-bar">
-      <label>🔗 Pulsara Incident ID <span style="color:var(--red)">*</span></label>
+      <label id="incLabel">🔗 Pulsara Incident ID <span style="color:var(--red)">*</span></label>
       <input type="text" id="incidentId" placeholder="e.g. 14573" maxlength="20" oninput="updateIncSt()"/>
       <span class="inc-st" id="incSt">Enter Incident ID to begin</span>
     </div>
 
     <!-- Section 1 — Timestamp -->
     <div class="card">
-      <div class="card-head"><div class="ch-ic">🕐</div><h2>Registration Timestamp</h2><span class="step">Section 1</span></div>
+      <div class="card-head"><div class="ch-ic">🕐</div><h2 id="s1Title">Registration Timestamp</h2><span class="step" id="s1Step">Section 1</span></div>
       <div class="card-body">
-        <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px;">Auto-captured when this form was opened.</p>
+        <p id="s1Hint" style="font-size:.83rem;color:var(--muted);margin-bottom:14px;">Auto-captured when this form was opened.</p>
         <div class="ts-box">
-          <div class="ts-c"><span class="ts-l">Date</span><span class="ts-v" id="tsDate">—</span></div>
-          <div class="ts-c"><span class="ts-l">Time (Local)</span><span class="ts-v" id="tsTime">—</span></div>
+          <div class="ts-c"><span class="ts-l" id="tsLblDate">Date</span><span class="ts-v" id="tsDate">—</span></div>
+          <div class="ts-c"><span class="ts-l" id="tsLblTime">Time (Local)</span><span class="ts-v" id="tsTime">—</span></div>
           <div class="ts-c"><span class="ts-l">UTC / ISO 8601</span><span class="ts-v sm" id="tsISO">—</span></div>
         </div>
         <input type="hidden" id="createdAt"/>
       </div>
     </div>
 
-    <!-- Section 2 — Wristband ID (posted to /identifiers with PATIENT_WRISTBAND_NUMBER category) -->
+    <!-- Section 2 — Wristband ID -->
     <div class="card">
       <div class="card-head">
         <div class="ch-ic">🏷️</div>
-        <h2>Wristband ID</h2>
-        <span class="step">Section 2</span>
+        <h2 id="s2Title">Wristband ID</h2>
+        <span class="step" id="s2Step">Section 2</span>
       </div>
       <div class="card-body">
         <div class="field">
-          <label>Wristband ID <span style="font-weight:400;text-transform:none;font-size:.72rem;">(posted to <code>/identifiers</code> · <code>PATIENT_WRISTBAND_NUMBER</code>)</span></label>
+          <label id="wbLabel">Wristband ID <span style="font-weight:400;text-transform:none;font-size:.72rem;">(optional)</span></label>
           <div class="scan-row">
-            <input type="text" id="configId" placeholder="Type manually or scan barcode…" maxlength="100"
-              oninput="onConfigIdInput()"/>
-            <button class="scan-btn" id="scanBtn" onclick="openBarcodeScanner()" title="Scan 1D barcode">
-              <span>📷</span> Scan
+            <input type="text" id="wristbandId" placeholder="Type manually or scan barcode…" maxlength="100"
+              oninput="onWristbandInput()"/>
+            <button class="scan-btn" id="scanBtn" onclick="openBarcodeScanner()">
+              <span>📷</span> <span id="scanBtnTxt">Scan</span>
             </button>
           </div>
           <span class="scan-status" id="scanStatus"></span>
-          <span class="field-hint">
-            Accepts CODE-128, CODE-39, CODE-93, CODABAR · Powers "Scan to Find" / "Scan to Add" in Pulsara mobile.
-            Scan a 1D barcode or type the value manually.
-          </span>
+          <span class="field-hint" id="wbHint">Powers "Scan to Find" / "Scan to Add" in Pulsara mobile · CODE-128, CODE-39, CODE-93, CODABAR.</span>
         </div>
       </div>
     </div>
 
     <!-- Section 3 — Demographics -->
     <div class="card">
-      <div class="card-head"><div class="ch-ic">👤</div><h2>Patient Demographics</h2><span class="step">Section 3</span></div>
+      <div class="card-head"><div class="ch-ic">👤</div><h2 id="s3Title">Patient Demographics</h2><span class="step" id="s3Step">Section 3</span></div>
       <div class="card-body">
         <div class="g2">
           <div class="field">
-            <label>First Name <span class="req">*</span></label>
+            <label id="lblFirst">First Name <span class="req">*</span></label>
             <input type="text" id="firstName" placeholder="First name" maxlength="20" autocomplete="given-name"/>
           </div>
           <div class="field">
-            <label>Last Name <span class="req">*</span></label>
+            <label id="lblLast">Last Name <span class="req">*</span></label>
             <input type="text" id="lastName" placeholder="Last name" maxlength="20" autocomplete="family-name"/>
           </div>
         </div>
         <div class="g3 mt">
           <div class="field">
-            <label>Date of Birth</label>
+            <label id="lblDob">Date of Birth</label>
             <input type="date" id="dob" oninput="calcAge()"/>
-            <span class="field-hint">Preferred over age.</span>
+            <span class="field-hint" id="hintDob">Preferred over age.</span>
           </div>
           <div class="field">
-            <label>Age (years)</label>
+            <label id="lblAge">Age (years)</label>
             <input type="number" id="age" min="1" max="120" placeholder="Auto from DOB"/>
             <span class="field-hint" id="ageHint">Enter if DOB unknown.</span>
           </div>
           <div class="field">
-            <label>Phone</label>
+            <label id="lblPhone">Phone</label>
             <input type="tel" id="phone" placeholder="(555) 000-0000" autocomplete="tel"/>
           </div>
         </div>
         <div class="mt">
           <div class="field">
-            <label>Gender</label>
+            <label id="lblGender">Gender</label>
             <div class="radio-row">
-              <label><input type="radio" name="gender" value="male"/> Male</label>
-              <label><input type="radio" name="gender" value="female"/> Female</label>
-              <label><input type="radio" name="gender" value="other"/> Other</label>
+              <label><input type="radio" name="gender" value="male"/> <span id="gMale">Male</span></label>
+              <label><input type="radio" name="gender" value="female"/> <span id="gFemale">Female</span></label>
+              <label><input type="radio" name="gender" value="other"/> <span id="gOther">Other</span></label>
             </div>
           </div>
         </div>
@@ -374,25 +395,25 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
 
     <!-- Section 4 — Address -->
     <div class="card">
-      <div class="card-head"><div class="ch-ic">📍</div><h2>Address</h2><span class="step">Section 4</span></div>
+      <div class="card-head"><div class="ch-ic">📍</div><h2 id="s4Title">Address</h2><span class="step" id="s4Step">Section 4</span></div>
       <div class="card-body">
         <div class="field">
-          <label>Street Address</label>
+          <label id="lblStreet">Street Address</label>
           <input type="text" id="address" placeholder="123 Main St" autocomplete="street-address"/>
         </div>
         <div class="g3 mt">
           <div class="field s2">
-            <label>City</label>
+            <label id="lblCity">City</label>
             <input type="text" id="city" placeholder="City" autocomplete="address-level2"/>
           </div>
           <div class="field">
-            <label>State</label>
+            <label id="lblState">State</label>
             <input type="text" id="state" placeholder="ST" maxlength="2" autocomplete="address-level1"/>
           </div>
         </div>
         <div class="g2 mt">
           <div class="field">
-            <label>ZIP Code</label>
+            <label id="lblZip">ZIP Code</label>
             <input type="text" id="zip" placeholder="00000" maxlength="10" autocomplete="postal-code"/>
           </div>
         </div>
@@ -401,10 +422,10 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
 
     <!-- Section 5 — Narrative / Notes -->
     <div class="card">
-      <div class="card-head"><div class="ch-ic">🩺</div><h2>Narrative / Notes</h2><span class="step">Section 5</span></div>
+      <div class="card-head"><div class="ch-ic">🩺</div><h2 id="s5Title">Narrative / Notes</h2><span class="step" id="s5Step">Section 5</span></div>
       <div class="card-body">
         <div class="field">
-          <label>Narrative / Notes <span class="req">*</span></label>
+          <label id="lblCC">Narrative / Notes <span class="req">*</span></label>
           <div class="cc-wrap">
             <textarea id="cc" rows="3" maxlength="255"
               placeholder="Describe the primary concern or reason for registration…"
@@ -412,18 +433,18 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
               style="resize:vertical;width:100%;"></textarea>
             <span class="cc-count" id="ccCount">0</span>
           </div>
-          <span class="field-hint">Max 255 characters. Phone and address appended automatically.</span>
+          <span class="field-hint" id="hintCC">Max 255 characters. Phone and address appended automatically.</span>
         </div>
       </div>
     </div>
 
     <!-- Section 6 — Photos -->
     <div class="card">
-      <div class="card-head"><div class="ch-ic">📷</div><h2>Photos</h2><span class="step">Section 6</span></div>
+      <div class="card-head"><div class="ch-ic">📷</div><h2 id="s6Title">Photos</h2><span class="step" id="s6Step">Section 6</span></div>
       <div class="card-body">
         <div class="img-actions">
-          <button class="img-btn" onclick="openCamera()">📷 Take Photo</button>
-          <button class="img-btn" onclick="document.getElementById('fileUpload').click()">📁 Upload Photos</button>
+          <button class="img-btn" id="btnTakePhoto" onclick="openCamera()">📷 Take Photo</button>
+          <button class="img-btn" id="btnUpload" onclick="document.getElementById('fileUpload').click()">📁 Upload Photos</button>
         </div>
         <input type="file" id="fileUpload" accept="image/*" multiple style="display:none" onchange="handleFiles(this)"/>
         <div id="prevArea" style="display:none"><div class="img-grid" id="trow"></div></div>
@@ -433,8 +454,8 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
 
     <!-- Submit row -->
     <div class="btn-row">
-      <button class="btn-save" id="saveBtn" onclick="saveRecord()"><span>🚀</span> Submit to Pulsara</button>
-      <button class="btn-secondary" onclick="clearForm()">🗑 Clear Form</button>
+      <button class="btn-save" id="saveBtn" onclick="saveRecord()"><span>🚀</span> <span id="btnSubmitTxt">Submit to Pulsara</span></button>
+      <button class="btn-secondary" id="btnClear" onclick="clearForm()">🗑 <span id="btnClearTxt">Clear Form</span></button>
     </div>
   </main>
 </div>
@@ -452,10 +473,9 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
             <option value="https://api.pulsara.com">Production</option>
           </select>
         </div>
-        <p style="font-size:.78rem;color:var(--muted);">All API calls are proxied through Vercel (<code>/api/pulsara/…</code>) — no CORS issues.</p>
+        <p style="font-size:.78rem;color:var(--muted);">All API calls proxied through Vercel (<code>/api/pulsara/…</code>) — no CORS issues.</p>
       </div>
     </div>
-
     <div class="card">
       <div class="card-head">
         <div class="ch-ic">🔑</div><h2>Authentication</h2>
@@ -463,15 +483,8 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
       </div>
       <div class="card-body">
         <div class="g2">
-          <div class="field">
-            <label>Username</label>
-            <input type="text" id="adminUser" placeholder="Pulsara username" autocomplete="username"/>
-          </div>
-          <div class="field">
-            <label>Password</label>
-            <input type="password" id="adminPass" placeholder="Password" autocomplete="current-password"
-              onkeydown="if(event.key==='Enter')doLogin()"/>
-          </div>
+          <div class="field"><label>Username</label><input type="text" id="adminUser" placeholder="Pulsara username" autocomplete="username"/></div>
+          <div class="field"><label>Password</label><input type="password" id="adminPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
         </div>
         <div class="btn-row" style="margin-top:14px;">
           <button class="btn-save" onclick="doLogin()">🔓 Login</button>
@@ -479,11 +492,10 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
         </div>
       </div>
     </div>
-
     <div class="card">
       <div class="card-head"><div class="ch-ic">🔗</div><h2>Incident Setup &amp; QR Code</h2><span class="step">Step 3</span></div>
       <div class="card-body">
-        <p style="font-size:.83rem;color:var(--muted);margin-bottom:16px;">Set the active Incident ID for this collection point. Generate a QR code or push to this session.</p>
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:16px;">Set the active Incident ID. Generate a QR code or push to this session.</p>
         <div class="g2">
           <div class="field">
             <label>Active Incident ID <span class="req">*</span></label>
@@ -510,22 +522,18 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
                 <button class="qr-btn" onclick="downloadQR()">⬇ Download PNG</button>
                 <button class="qr-btn" onclick="printQR()">🖨 Print Sheet</button>
               </div>
-              <p class="qr-note">⚠️ The QR code encodes a session token. Treat it like a password.</p>
+              <p class="qr-note">⚠️ QR encodes a session token — treat like a password. Token expires on logout.</p>
             </div>
           </div>
         </div>
       </div>
     </div>
-
     <div class="card">
       <div class="card-head">
         <div class="ch-ic">📋</div><h2>Activity Log</h2>
-        <button class="btn-secondary" style="margin-left:auto;padding:5px 14px;font-size:.78rem;"
-          onclick="document.getElementById('logBox').textContent=''">Clear</button>
+        <button class="btn-secondary" style="margin-left:auto;padding:5px 14px;font-size:.78rem;" onclick="document.getElementById('logBox').textContent=''">Clear</button>
       </div>
-      <div class="card-body">
-        <div class="log-box" id="logBox">Ready. Log in to begin.</div>
-      </div>
+      <div class="card-body"><div class="log-box" id="logBox">Ready. Log in to begin.</div></div>
     </div>
   </div>
 </div>
@@ -537,12 +545,355 @@ function renderQR(text, canvasEl) {
   const url = `https://api.qrserver.com/v1/create-qr-code/?size=${sz}x${sz}&data=${encodeURIComponent(text)}&format=png&margin=10&ecc=M`;
   const img = new Image(); img.crossOrigin = 'anonymous';
   img.onload = () => { const c = canvasEl.getContext('2d'); c.clearRect(0,0,sz,sz); c.drawImage(img,0,0,sz,sz); };
-  img.onerror = () => {
-    const c = canvasEl.getContext('2d'); c.fillStyle='#fff'; c.fillRect(0,0,sz,sz);
-    c.fillStyle='#e53935'; c.font='bold 13px Arial'; c.textAlign='center';
-    c.fillText('⚠ QR unavailable',sz/2,sz/2-8);
-  };
+  img.onerror = () => { const c = canvasEl.getContext('2d'); c.fillStyle='#fff'; c.fillRect(0,0,sz,sz); c.fillStyle='#e53935'; c.font='bold 13px Arial'; c.textAlign='center'; c.fillText('⚠ QR unavailable',sz/2,sz/2-8); };
   img.src = url;
+}
+</script>
+
+<!-- TRANSLATIONS -->
+<script>
+// Full UI translations for top 10 US languages.
+// Keys map 1:1 to element IDs or named string slots used by applyLanguage().
+const T = {
+  en: {
+    banner: 'All information is securely transmitted to Pulsara. Fields marked <strong>*</strong> are required.',
+    incLabel: '🔗 Pulsara Incident ID *', incPlaceholder: 'e.g. 14573', incEmpty: 'Enter Incident ID to begin',
+    s1Title: 'Registration Timestamp', s1Step: 'Section 1', s1Hint: 'Auto-captured when this form was opened.',
+    tsDate: 'Date', tsTime: 'Time (Local)',
+    s2Title: 'Wristband ID', s2Step: 'Section 2',
+    wbLabel: 'Wristband ID', wbOptional: '(optional)', wbPlaceholder: 'Type manually or scan barcode…', wbHint: 'Powers "Scan to Find" / "Scan to Add" in Pulsara mobile · CODE-128, CODE-39, CODE-93, CODABAR.',
+    scanBtnTxt: 'Scan', bcCancel: '✕ Cancel', bcScanning: '📸 Point at a 1D barcode…', bcStarting: '🔄 Starting camera…',
+    s3Title: 'Patient Demographics', s3Step: 'Section 3',
+    lblFirst: 'First Name *', lblLast: 'Last Name *',
+    phFirst: 'First name', phLast: 'Last name',
+    lblDob: 'Date of Birth', hintDob: 'Preferred over age.',
+    lblAge: 'Age (years)', phAge: 'Auto from DOB', hintAge: 'Enter if DOB unknown.', hintAgeDob: 'Calculated from DOB.',
+    lblPhone: 'Phone', phPhone: '(555) 000-0000',
+    lblGender: 'Gender', gMale: 'Male', gFemale: 'Female', gOther: 'Other',
+    s4Title: 'Address', s4Step: 'Section 4',
+    lblStreet: 'Street Address', phStreet: '123 Main St',
+    lblCity: 'City', phCity: 'City', lblState: 'State', phState: 'ST', lblZip: 'ZIP Code', phZip: '00000',
+    s5Title: 'Narrative / Notes', s5Step: 'Section 5',
+    lblCC: 'Narrative / Notes *', phCC: 'Describe the primary concern or reason for registration…', hintCC: 'Max 255 characters. Phone and address appended automatically.',
+    s6Title: 'Photos', s6Step: 'Section 6',
+    btnTakePhoto: '📷 Take Photo', btnUpload: '📁 Upload Photos', noImgNote: 'No photos added yet. Photos are optional.',
+    btnSubmitTxt: 'Submit to Pulsara', btnClearTxt: 'Clear Form',
+    progTitle: 'Submitting to Pulsara',
+    camTitle: 'Camera Capture',
+    valIncident: '"Incident ID" is required', valFirst: '"First Name" is required', valLast: '"Last Name" is required', valCC: '"Narrative / Notes" is required',
+    valNoToken: 'Not logged in — scan a valid QR code or contact admin',
+    toastCleared: 'Form cleared', confirmClear: 'Clear all form data?',
+  },
+  es: {
+    banner: 'Toda la información se transmite de forma segura a Pulsara. Los campos marcados con <strong>*</strong> son obligatorios.',
+    incLabel: '🔗 ID de Incidente Pulsara *', incPlaceholder: 'ej. 14573', incEmpty: 'Ingrese el ID del incidente para comenzar',
+    s1Title: 'Marca de Tiempo de Registro', s1Step: 'Sección 1', s1Hint: 'Capturado automáticamente al abrir este formulario.',
+    tsDate: 'Fecha', tsTime: 'Hora (Local)',
+    s2Title: 'ID de Pulsera', s2Step: 'Sección 2',
+    wbLabel: 'ID de Pulsera', wbOptional: '(opcional)', wbPlaceholder: 'Escriba manualmente o escanee…', wbHint: 'Permite "Buscar por escaneo" en Pulsara móvil.',
+    scanBtnTxt: 'Escanear', bcCancel: '✕ Cancelar', bcScanning: '📸 Apunte a un código de barras…', bcStarting: '🔄 Iniciando cámara…',
+    s3Title: 'Datos del Paciente', s3Step: 'Sección 3',
+    lblFirst: 'Nombre *', lblLast: 'Apellido *',
+    phFirst: 'Nombre', phLast: 'Apellido',
+    lblDob: 'Fecha de Nacimiento', hintDob: 'Preferido sobre la edad.',
+    lblAge: 'Edad (años)', phAge: 'Auto desde fecha nacimiento', hintAge: 'Ingrese si no conoce la fecha de nacimiento.', hintAgeDob: 'Calculado desde la fecha de nacimiento.',
+    lblPhone: 'Teléfono', phPhone: '(555) 000-0000',
+    lblGender: 'Género', gMale: 'Masculino', gFemale: 'Femenino', gOther: 'Otro',
+    s4Title: 'Dirección', s4Step: 'Sección 4',
+    lblStreet: 'Dirección', phStreet: '123 Calle Principal',
+    lblCity: 'Ciudad', phCity: 'Ciudad', lblState: 'Estado', phState: 'ST', lblZip: 'Código Postal', phZip: '00000',
+    s5Title: 'Narrativa / Notas', s5Step: 'Sección 5',
+    lblCC: 'Narrativa / Notas *', phCC: 'Describa el motivo principal de registro…', hintCC: 'Máx. 255 caracteres. Teléfono y dirección se agregan automáticamente.',
+    s6Title: 'Fotos', s6Step: 'Sección 6',
+    btnTakePhoto: '📷 Tomar Foto', btnUpload: '📁 Subir Fotos', noImgNote: 'No se han agregado fotos. Las fotos son opcionales.',
+    btnSubmitTxt: 'Enviar a Pulsara', btnClearTxt: 'Limpiar Formulario',
+    progTitle: 'Enviando a Pulsara',
+    camTitle: 'Captura de Cámara',
+    valIncident: '"ID de Incidente" es obligatorio', valFirst: '"Nombre" es obligatorio', valLast: '"Apellido" es obligatorio', valCC: '"Narrativa / Notas" es obligatorio',
+    valNoToken: 'No ha iniciado sesión — escanee un código QR válido o contacte al administrador',
+    toastCleared: 'Formulario limpiado', confirmClear: '¿Borrar todos los datos del formulario?',
+  },
+  zh: {
+    banner: '所有信息均安全传输至 Pulsara。标有 <strong>*</strong> 的字段为必填项。',
+    incLabel: '🔗 Pulsara 事件编号 *', incPlaceholder: '例如 14573', incEmpty: '请输入事件编号以开始',
+    s1Title: '登记时间戳', s1Step: '第 1 节', s1Hint: '表单打开时自动记录。',
+    tsDate: '日期', tsTime: '时间（本地）',
+    s2Title: '腕带编号', s2Step: '第 2 节',
+    wbLabel: '腕带编号', wbOptional: '（可选）', wbPlaceholder: '手动输入或扫描条码…', wbHint: '支持 Pulsara 移动端"扫描查找"/"扫描添加"功能。',
+    scanBtnTxt: '扫描', bcCancel: '✕ 取消', bcScanning: '📸 对准一维条码…', bcStarting: '🔄 启动摄像头…',
+    s3Title: '患者信息', s3Step: '第 3 节',
+    lblFirst: '名 *', lblLast: '姓 *',
+    phFirst: '名', phLast: '姓',
+    lblDob: '出生日期', hintDob: '优先于年龄。',
+    lblAge: '年龄（岁）', phAge: '从出生日期自动计算', hintAge: '不知出生日期时填写。', hintAgeDob: '从出生日期计算。',
+    lblPhone: '电话', phPhone: '(555) 000-0000',
+    lblGender: '性别', gMale: '男', gFemale: '女', gOther: '其他',
+    s4Title: '地址', s4Step: '第 4 节',
+    lblStreet: '街道地址', phStreet: '123 主街',
+    lblCity: '城市', phCity: '城市', lblState: '州', phState: '州', lblZip: '邮政编码', phZip: '00000',
+    s5Title: '描述 / 备注', s5Step: '第 5 节',
+    lblCC: '描述 / 备注 *', phCC: '描述登记的主要原因或问题…', hintCC: '最多 255 个字符。电话和地址将自动附加。',
+    s6Title: '照片', s6Step: '第 6 节',
+    btnTakePhoto: '📷 拍照', btnUpload: '📁 上传照片', noImgNote: '尚未添加照片。照片为可选项。',
+    btnSubmitTxt: '提交至 Pulsara', btnClearTxt: '清除表单',
+    progTitle: '正在提交至 Pulsara',
+    camTitle: '相机拍摄',
+    valIncident: '"事件编号"为必填项', valFirst: '"名"为必填项', valLast: '"姓"为必填项', valCC: '"描述/备注"为必填项',
+    valNoToken: '未登录——请扫描有效的二维码或联系管理员',
+    toastCleared: '表单已清除', confirmClear: '清除所有表单数据？',
+  },
+  tl: {
+    banner: 'Lahat ng impormasyon ay ligtas na ipinapadala sa Pulsara. Ang mga field na may <strong>*</strong> ay kinakailangan.',
+    incLabel: '🔗 Pulsara Incident ID *', incPlaceholder: 'hal. 14573', incEmpty: 'Ilagay ang Incident ID para magsimula',
+    s1Title: 'Oras ng Pagpaparehistro', s1Step: 'Seksyon 1', s1Hint: 'Awtomatikong nakuha nang buksan ang form na ito.',
+    tsDate: 'Petsa', tsTime: 'Oras (Lokal)',
+    s2Title: 'ID ng Pulseras', s2Step: 'Seksyon 2',
+    wbLabel: 'ID ng Pulseras', wbOptional: '(opsyonal)', wbPlaceholder: 'I-type o i-scan ang barcode…', wbHint: 'Para sa "I-scan para Hanapin" sa Pulsara mobile.',
+    scanBtnTxt: 'I-scan', bcCancel: '✕ Kanselahin', bcScanning: '📸 Ituro sa 1D barcode…', bcStarting: '🔄 Sinisimulan ang camera…',
+    s3Title: 'Impormasyon ng Pasyente', s3Step: 'Seksyon 3',
+    lblFirst: 'Pangalan *', lblLast: 'Apelyido *',
+    phFirst: 'Pangalan', phLast: 'Apelyido',
+    lblDob: 'Petsa ng Kapanganakan', hintDob: 'Mas gusto kaysa sa edad.',
+    lblAge: 'Edad (taon)', phAge: 'Auto mula sa petsa', hintAge: 'Ilagay kung hindi alam ang petsa ng kapanganakan.', hintAgeDob: 'Kinakalkula mula sa petsa ng kapanganakan.',
+    lblPhone: 'Telepono', phPhone: '(555) 000-0000',
+    lblGender: 'Kasarian', gMale: 'Lalaki', gFemale: 'Babae', gOther: 'Iba pa',
+    s4Title: 'Address', s4Step: 'Seksyon 4',
+    lblStreet: 'Kalye', phStreet: '123 Pangunahing Kalye',
+    lblCity: 'Lungsod', phCity: 'Lungsod', lblState: 'Estado', phState: 'ST', lblZip: 'ZIP Code', phZip: '00000',
+    s5Title: 'Paglalarawan / Mga Tala', s5Step: 'Seksyon 5',
+    lblCC: 'Paglalarawan / Mga Tala *', phCC: 'Ilarawan ang pangunahing dahilan ng pagpaparehistro…', hintCC: 'Max 255 character. Awtomatikong idinaragdag ang telepono at address.',
+    s6Title: 'Mga Larawan', s6Step: 'Seksyon 6',
+    btnTakePhoto: '📷 Kumuha ng Larawan', btnUpload: '📁 Mag-upload ng Larawan', noImgNote: 'Wala pang larawang naidagdag. Opsyonal ang mga larawan.',
+    btnSubmitTxt: 'Isumite sa Pulsara', btnClearTxt: 'I-clear ang Form',
+    progTitle: 'Isinusumite sa Pulsara',
+    camTitle: 'Pagkuha ng Camera',
+    valIncident: 'Kailangan ang "Incident ID"', valFirst: 'Kailangan ang "Pangalan"', valLast: 'Kailangan ang "Apelyido"', valCC: 'Kailangan ang "Paglalarawan / Mga Tala"',
+    valNoToken: 'Hindi naka-login — mag-scan ng wastong QR code o makipag-ugnayan sa admin',
+    toastCleared: 'Na-clear ang form', confirmClear: 'I-clear ang lahat ng data ng form?',
+  },
+  vi: {
+    banner: 'Tất cả thông tin được truyền an toàn đến Pulsara. Các trường có dấu <strong>*</strong> là bắt buộc.',
+    incLabel: '🔗 ID Sự Cố Pulsara *', incPlaceholder: 'vd. 14573', incEmpty: 'Nhập ID Sự Cố để bắt đầu',
+    s1Title: 'Thời Gian Đăng Ký', s1Step: 'Phần 1', s1Hint: 'Tự động ghi lại khi mở biểu mẫu này.',
+    tsDate: 'Ngày', tsTime: 'Giờ (Địa phương)',
+    s2Title: 'ID Vòng Đeo Tay', s2Step: 'Phần 2',
+    wbLabel: 'ID Vòng Đeo Tay', wbOptional: '(tùy chọn)', wbPlaceholder: 'Nhập thủ công hoặc quét mã vạch…', wbHint: 'Hỗ trợ "Quét để tìm" trong Pulsara di động.',
+    scanBtnTxt: 'Quét', bcCancel: '✕ Hủy', bcScanning: '📸 Hướng vào mã vạch 1D…', bcStarting: '🔄 Đang khởi động camera…',
+    s3Title: 'Thông Tin Bệnh Nhân', s3Step: 'Phần 3',
+    lblFirst: 'Tên *', lblLast: 'Họ *',
+    phFirst: 'Tên', phLast: 'Họ',
+    lblDob: 'Ngày Sinh', hintDob: 'Ưu tiên hơn tuổi.',
+    lblAge: 'Tuổi (năm)', phAge: 'Tự động từ ngày sinh', hintAge: 'Nhập nếu không biết ngày sinh.', hintAgeDob: 'Tính từ ngày sinh.',
+    lblPhone: 'Điện Thoại', phPhone: '(555) 000-0000',
+    lblGender: 'Giới Tính', gMale: 'Nam', gFemale: 'Nữ', gOther: 'Khác',
+    s4Title: 'Địa Chỉ', s4Step: 'Phần 4',
+    lblStreet: 'Địa Chỉ Đường', phStreet: '123 Đường Chính',
+    lblCity: 'Thành Phố', phCity: 'Thành Phố', lblState: 'Tiểu Bang', phState: 'ST', lblZip: 'Mã Bưu Chính', phZip: '00000',
+    s5Title: 'Tường Thuật / Ghi Chú', s5Step: 'Phần 5',
+    lblCC: 'Tường Thuật / Ghi Chú *', phCC: 'Mô tả lý do chính của việc đăng ký…', hintCC: 'Tối đa 255 ký tự. Điện thoại và địa chỉ được thêm tự động.',
+    s6Title: 'Ảnh', s6Step: 'Phần 6',
+    btnTakePhoto: '📷 Chụp Ảnh', btnUpload: '📁 Tải Ảnh Lên', noImgNote: 'Chưa có ảnh nào. Ảnh là tùy chọn.',
+    btnSubmitTxt: 'Gửi tới Pulsara', btnClearTxt: 'Xóa Biểu Mẫu',
+    progTitle: 'Đang gửi tới Pulsara',
+    camTitle: 'Chụp Ảnh',
+    valIncident: '"ID Sự Cố" là bắt buộc', valFirst: '"Tên" là bắt buộc', valLast: '"Họ" là bắt buộc', valCC: '"Tường thuật / Ghi chú" là bắt buộc',
+    valNoToken: 'Chưa đăng nhập — quét mã QR hợp lệ hoặc liên hệ quản trị viên',
+    toastCleared: 'Đã xóa biểu mẫu', confirmClear: 'Xóa tất cả dữ liệu biểu mẫu?',
+  },
+  ar: {
+    banner: 'جميع المعلومات تُرسل بأمان إلى Pulsara. الحقول المعلّمة بـ <strong>*</strong> مطلوبة.',
+    incLabel: '🔗 معرّف الحادث في Pulsara *', incPlaceholder: 'مثال: 14573', incEmpty: 'أدخل معرّف الحادث للبدء',
+    s1Title: 'وقت التسجيل', s1Step: 'القسم 1', s1Hint: 'يُسجَّل تلقائيًا عند فتح هذا النموذج.',
+    tsDate: 'التاريخ', tsTime: 'الوقت (المحلي)',
+    s2Title: 'معرّف السوار', s2Step: 'القسم 2',
+    wbLabel: 'معرّف السوار', wbOptional: '(اختياري)', wbPlaceholder: 'اكتب يدويًا أو امسح الرمز الشريطي…', wbHint: 'يتيح "المسح للبحث" في تطبيق Pulsara للجوال.',
+    scanBtnTxt: 'مسح', bcCancel: '✕ إلغاء', bcScanning: '📸 وجّه نحو الرمز الشريطي…', bcStarting: '🔄 جارٍ تشغيل الكاميرا…',
+    s3Title: 'بيانات المريض', s3Step: 'القسم 3',
+    lblFirst: 'الاسم الأول *', lblLast: 'اسم العائلة *',
+    phFirst: 'الاسم الأول', phLast: 'اسم العائلة',
+    lblDob: 'تاريخ الميلاد', hintDob: 'مفضّل على العمر.',
+    lblAge: 'العمر (سنوات)', phAge: 'تلقائي من تاريخ الميلاد', hintAge: 'أدخل إذا كان تاريخ الميلاد مجهولًا.', hintAgeDob: 'محسوب من تاريخ الميلاد.',
+    lblPhone: 'الهاتف', phPhone: '(555) 000-0000',
+    lblGender: 'الجنس', gMale: 'ذكر', gFemale: 'أنثى', gOther: 'آخر',
+    s4Title: 'العنوان', s4Step: 'القسم 4',
+    lblStreet: 'عنوان الشارع', phStreet: '123 الشارع الرئيسي',
+    lblCity: 'المدينة', phCity: 'المدينة', lblState: 'الولاية', phState: 'الولاية', lblZip: 'الرمز البريدي', phZip: '00000',
+    s5Title: 'السرد / الملاحظات', s5Step: 'القسم 5',
+    lblCC: 'السرد / الملاحظات *', phCC: 'صف السبب الرئيسي للتسجيل…', hintCC: 'الحد الأقصى 255 حرفًا. يُضاف الهاتف والعنوان تلقائيًا.',
+    s6Title: 'الصور', s6Step: 'القسم 6',
+    btnTakePhoto: '📷 التقاط صورة', btnUpload: '📁 تحميل صور', noImgNote: 'لم تُضف صور بعد. الصور اختيارية.',
+    btnSubmitTxt: 'إرسال إلى Pulsara', btnClearTxt: 'مسح النموذج',
+    progTitle: 'جارٍ الإرسال إلى Pulsara',
+    camTitle: 'التقاط بالكاميرا',
+    valIncident: '"معرّف الحادث" مطلوب', valFirst: '"الاسم الأول" مطلوب', valLast: '"اسم العائلة" مطلوب', valCC: '"السرد / الملاحظات" مطلوب',
+    valNoToken: 'غير مسجّل الدخول — امسح رمز QR صالحًا أو تواصل مع المسؤول',
+    toastCleared: 'تم مسح النموذج', confirmClear: 'هل تريد مسح جميع بيانات النموذج؟',
+  },
+  fr: {
+    banner: 'Toutes les informations sont transmises en toute sécurité à Pulsara. Les champs marqués <strong>*</strong> sont obligatoires.',
+    incLabel: '🔗 ID Incident Pulsara *', incPlaceholder: 'ex. 14573', incEmpty: 'Saisissez l\'ID d\'incident pour commencer',
+    s1Title: 'Horodatage d\'Enregistrement', s1Step: 'Section 1', s1Hint: 'Capturé automatiquement à l\'ouverture du formulaire.',
+    tsDate: 'Date', tsTime: 'Heure (Locale)',
+    s2Title: 'ID Bracelet', s2Step: 'Section 2',
+    wbLabel: 'ID Bracelet', wbOptional: '(optionnel)', wbPlaceholder: 'Saisir manuellement ou scanner…', wbHint: 'Active "Scanner pour trouver" dans Pulsara mobile.',
+    scanBtnTxt: 'Scanner', bcCancel: '✕ Annuler', bcScanning: '📸 Pointez vers un code-barres 1D…', bcStarting: '🔄 Démarrage de la caméra…',
+    s3Title: 'Données du Patient', s3Step: 'Section 3',
+    lblFirst: 'Prénom *', lblLast: 'Nom de famille *',
+    phFirst: 'Prénom', phLast: 'Nom de famille',
+    lblDob: 'Date de Naissance', hintDob: 'Préféré à l\'âge.',
+    lblAge: 'Âge (ans)', phAge: 'Auto depuis date de naissance', hintAge: 'Saisir si date de naissance inconnue.', hintAgeDob: 'Calculé depuis la date de naissance.',
+    lblPhone: 'Téléphone', phPhone: '(555) 000-0000',
+    lblGender: 'Genre', gMale: 'Homme', gFemale: 'Femme', gOther: 'Autre',
+    s4Title: 'Adresse', s4Step: 'Section 4',
+    lblStreet: 'Adresse', phStreet: '123 Rue Principale',
+    lblCity: 'Ville', phCity: 'Ville', lblState: 'État', phState: 'État', lblZip: 'Code Postal', phZip: '00000',
+    s5Title: 'Récit / Notes', s5Step: 'Section 5',
+    lblCC: 'Récit / Notes *', phCC: 'Décrivez le motif principal de l\'enregistrement…', hintCC: 'Max 255 caractères. Téléphone et adresse ajoutés automatiquement.',
+    s6Title: 'Photos', s6Step: 'Section 6',
+    btnTakePhoto: '📷 Prendre une Photo', btnUpload: '📁 Télécharger des Photos', noImgNote: 'Aucune photo ajoutée. Les photos sont optionnelles.',
+    btnSubmitTxt: 'Soumettre à Pulsara', btnClearTxt: 'Effacer le Formulaire',
+    progTitle: 'Envoi à Pulsara',
+    camTitle: 'Capture Caméra',
+    valIncident: '"ID Incident" est requis', valFirst: '"Prénom" est requis', valLast: '"Nom de famille" est requis', valCC: '"Récit / Notes" est requis',
+    valNoToken: 'Non connecté — scannez un QR code valide ou contactez l\'administrateur',
+    toastCleared: 'Formulaire effacé', confirmClear: 'Effacer toutes les données du formulaire ?',
+  },
+  ko: {
+    banner: '모든 정보는 Pulsara에 안전하게 전송됩니다. <strong>*</strong> 표시된 항목은 필수입니다.',
+    incLabel: '🔗 Pulsara 사건 ID *', incPlaceholder: '예: 14573', incEmpty: '시작하려면 사건 ID를 입력하세요',
+    s1Title: '등록 시간', s1Step: '섹션 1', s1Hint: '이 양식을 열 때 자동으로 기록됩니다.',
+    tsDate: '날짜', tsTime: '시간 (현지)',
+    s2Title: '손목 밴드 ID', s2Step: '섹션 2',
+    wbLabel: '손목 밴드 ID', wbOptional: '(선택 사항)', wbPlaceholder: '직접 입력하거나 바코드 스캔…', wbHint: 'Pulsara 모바일의 "스캔하여 찾기" 기능을 지원합니다.',
+    scanBtnTxt: '스캔', bcCancel: '✕ 취소', bcScanning: '📸 1D 바코드를 향해 주세요…', bcStarting: '🔄 카메라 시작 중…',
+    s3Title: '환자 정보', s3Step: '섹션 3',
+    lblFirst: '이름 *', lblLast: '성 *',
+    phFirst: '이름', phLast: '성',
+    lblDob: '생년월일', hintDob: '나이보다 선호됩니다.',
+    lblAge: '나이 (세)', phAge: '생년월일에서 자동', hintAge: '생년월일을 모르는 경우 입력하세요.', hintAgeDob: '생년월일에서 계산됨.',
+    lblPhone: '전화번호', phPhone: '(555) 000-0000',
+    lblGender: '성별', gMale: '남성', gFemale: '여성', gOther: '기타',
+    s4Title: '주소', s4Step: '섹션 4',
+    lblStreet: '도로명 주소', phStreet: '123 메인 스트리트',
+    lblCity: '도시', phCity: '도시', lblState: '주', phState: 'ST', lblZip: '우편번호', phZip: '00000',
+    s5Title: '서술 / 메모', s5Step: '섹션 5',
+    lblCC: '서술 / 메모 *', phCC: '등록의 주요 이유나 관심사를 설명하세요…', hintCC: '최대 255자. 전화번호와 주소가 자동으로 추가됩니다.',
+    s6Title: '사진', s6Step: '섹션 6',
+    btnTakePhoto: '📷 사진 찍기', btnUpload: '📁 사진 업로드', noImgNote: '아직 추가된 사진이 없습니다. 사진은 선택 사항입니다.',
+    btnSubmitTxt: 'Pulsara에 제출', btnClearTxt: '양식 지우기',
+    progTitle: 'Pulsara에 제출 중',
+    camTitle: '카메라 캡처',
+    valIncident: '"사건 ID"는 필수입니다', valFirst: '"이름"은 필수입니다', valLast: '"성"은 필수입니다', valCC: '"서술 / 메모"는 필수입니다',
+    valNoToken: '로그인되지 않음 — 유효한 QR 코드를 스캔하거나 관리자에게 문의하세요',
+    toastCleared: '양식이 지워졌습니다', confirmClear: '모든 양식 데이터를 지우시겠습니까?',
+  },
+  ru: {
+    banner: 'Вся информация надёжно передаётся в Pulsara. Поля, отмеченные <strong>*</strong>, обязательны.',
+    incLabel: '🔗 ID инцидента Pulsara *', incPlaceholder: 'напр. 14573', incEmpty: 'Введите ID инцидента для начала',
+    s1Title: 'Время Регистрации', s1Step: 'Раздел 1', s1Hint: 'Автоматически зафиксировано при открытии формы.',
+    tsDate: 'Дата', tsTime: 'Время (Местное)',
+    s2Title: 'ID Браслета', s2Step: 'Раздел 2',
+    wbLabel: 'ID Браслета', wbOptional: '(необязательно)', wbPlaceholder: 'Введите вручную или отсканируйте…', wbHint: 'Поддерживает "Сканировать для поиска" в Pulsara Mobile.',
+    scanBtnTxt: 'Сканировать', bcCancel: '✕ Отмена', bcScanning: '📸 Направьте на 1D-штрихкод…', bcStarting: '🔄 Запуск камеры…',
+    s3Title: 'Данные Пациента', s3Step: 'Раздел 3',
+    lblFirst: 'Имя *', lblLast: 'Фамилия *',
+    phFirst: 'Имя', phLast: 'Фамилия',
+    lblDob: 'Дата Рождения', hintDob: 'Предпочтительнее возраста.',
+    lblAge: 'Возраст (лет)', phAge: 'Авто из даты рождения', hintAge: 'Введите, если дата рождения неизвестна.', hintAgeDob: 'Рассчитано из даты рождения.',
+    lblPhone: 'Телефон', phPhone: '(555) 000-0000',
+    lblGender: 'Пол', gMale: 'Мужской', gFemale: 'Женский', gOther: 'Другой',
+    s4Title: 'Адрес', s4Step: 'Раздел 4',
+    lblStreet: 'Улица', phStreet: '123 Главная улица',
+    lblCity: 'Город', phCity: 'Город', lblState: 'Штат', phState: 'Штат', lblZip: 'Почтовый индекс', phZip: '00000',
+    s5Title: 'Описание / Заметки', s5Step: 'Раздел 5',
+    lblCC: 'Описание / Заметки *', phCC: 'Опишите основную причину обращения…', hintCC: 'Макс. 255 символов. Телефон и адрес добавляются автоматически.',
+    s6Title: 'Фотографии', s6Step: 'Раздел 6',
+    btnTakePhoto: '📷 Сделать Фото', btnUpload: '📁 Загрузить Фото', noImgNote: 'Фотографий пока нет. Фотографии необязательны.',
+    btnSubmitTxt: 'Отправить в Pulsara', btnClearTxt: 'Очистить Форму',
+    progTitle: 'Отправка в Pulsara',
+    camTitle: 'Захват Камерой',
+    valIncident: '"ID инцидента" обязателен', valFirst: '"Имя" обязательно', valLast: '"Фамилия" обязательна', valCC: '"Описание / Заметки" обязательны',
+    valNoToken: 'Не выполнен вход — отсканируйте действительный QR-код или обратитесь к администратору',
+    toastCleared: 'Форма очищена', confirmClear: 'Очистить все данные формы?',
+  },
+  ht: {
+    banner: 'Tout enfòmasyon yo transmèt an sekirite nan Pulsara. Jaden ki make <strong>*</strong> yo obligatwa.',
+    incLabel: '🔗 ID Ensidan Pulsara *', incPlaceholder: 'ex. 14573', incEmpty: 'Antre ID Ensidan an pou kòmanse',
+    s1Title: 'Moman Anrejistreman', s1Step: 'Seksyon 1', s1Hint: 'Kaptire otomatikman lè fòm sa a te ouvri.',
+    tsDate: 'Dat', tsTime: 'Lè (Lokal)',
+    s2Title: 'ID Brasley', s2Step: 'Seksyon 2',
+    wbLabel: 'ID Brasley', wbOptional: '(opsyonèl)', wbPlaceholder: 'Tape manyèlman oswa eskane kòd ba…', wbHint: 'Pèmèt "Eskane pou Jwenn" nan Pulsara mobil.',
+    scanBtnTxt: 'Eskane', bcCancel: '✕ Anile', bcScanning: '📸 Vize yon kòd ba 1D…', bcStarting: '🔄 Kamera ap kòmanse…',
+    s3Title: 'Enfòmasyon Pasyan', s3Step: 'Seksyon 3',
+    lblFirst: 'Prenon *', lblLast: 'Siyati *',
+    phFirst: 'Prenon', phLast: 'Siyati',
+    lblDob: 'Dat Nesans', hintDob: 'Pi pito pase laj.',
+    lblAge: 'Laj (ane)', phAge: 'Otomatik depi dat nesans', hintAge: 'Antre si dat nesans la pa konnen.', hintAgeDob: 'Kalkile depi dat nesans.',
+    lblPhone: 'Telefòn', phPhone: '(555) 000-0000',
+    lblGender: 'Sèks', gMale: 'Gason', gFemale: 'Fi', gOther: 'Lòt',
+    s4Title: 'Adrès', s4Step: 'Seksyon 4',
+    lblStreet: 'Adrès Lari', phStreet: '123 Ri Prensipal',
+    lblCity: 'Vil', phCity: 'Vil', lblState: 'Eta', phState: 'Eta', lblZip: 'Kòd Postal', phZip: '00000',
+    s5Title: 'Narasyon / Nòt', s5Step: 'Seksyon 5',
+    lblCC: 'Narasyon / Nòt *', phCC: 'Dekri rezon prensipal pou anrejistreman an…', hintCC: 'Maks 255 karaktè. Telefòn ak adrès ajoute otomatikman.',
+    s6Title: 'Foto', s6Step: 'Seksyon 6',
+    btnTakePhoto: '📷 Pran Foto', btnUpload: '📁 Telechaje Foto', noImgNote: 'Pa gen foto ankò. Foto yo opsyonèl.',
+    btnSubmitTxt: 'Soumèt nan Pulsara', btnClearTxt: 'Efase Fòm',
+    progTitle: 'Ap soumèt nan Pulsara',
+    camTitle: 'Kaptire ak Kamera',
+    valIncident: '"ID Ensidan" obligatwa', valFirst: '"Prenon" obligatwa', valLast: '"Siyati" obligatwa', valCC: '"Narasyon / Nòt" obligatwa',
+    valNoToken: 'Pa konekte — eskane yon kòd QR valid oswa kontakte admin',
+    toastCleared: 'Fòm efase', confirmClear: 'Efase tout done fòm nan?',
+  }
+};
+
+let currentLang = 'en';
+
+function applyLanguage(lang) {
+  currentLang = lang;
+  const t = T[lang] || T.en;
+  const set = (id, html, prop='innerHTML') => { const el=document.getElementById(id); if(el) el[prop]=html; };
+  const ph  = (id, v) => { const el=document.getElementById(id); if(el) el.placeholder=v; };
+
+  set('bannerText', t.banner);
+  set('s1Title', t.s1Title); set('s1Step', t.s1Step); set('s1Hint', t.s1Hint);
+  set('tsLblDate', t.tsDate); set('tsLblTime', t.tsTime);
+  set('s2Title', t.s2Title); set('s2Step', t.s2Step);
+  set('wbHint', t.wbHint); set('scanBtnTxt', t.scanBtnTxt);
+  ph('wristbandId', t.wbPlaceholder);
+  set('bcCancelBtn', t.bcCancel, 'textContent');
+  set('bcTitle', t.bcTitle || 'Scan Wristband');
+  set('s3Title', t.s3Title); set('s3Step', t.s3Step);
+  set('lblFirst', t.lblFirst); set('lblLast', t.lblLast);
+  ph('firstName', t.phFirst); ph('lastName', t.phLast);
+  set('lblDob', t.lblDob); set('hintDob', t.hintDob);
+  set('lblAge', t.lblAge); ph('age', t.phAge);
+  // Only update ageHint if DOB is not set (to preserve "Calculated from DOB" state)
+  if (!document.getElementById('dob').value) set('ageHint', t.hintAge);
+  set('lblPhone', t.lblPhone); ph('phone', t.phPhone);
+  set('lblGender', t.lblGender);
+  set('gMale', t.gMale); set('gFemale', t.gFemale); set('gOther', t.gOther);
+  set('s4Title', t.s4Title); set('s4Step', t.s4Step);
+  set('lblStreet', t.lblStreet); ph('address', t.phStreet);
+  set('lblCity', t.lblCity); ph('city', t.phCity);
+  set('lblState', t.lblState); ph('state', t.phState);
+  set('lblZip', t.lblZip); ph('zip', t.phZip);
+  set('s5Title', t.s5Title); set('s5Step', t.s5Step);
+  set('lblCC', t.lblCC); ph('cc', t.phCC); set('hintCC', t.hintCC);
+  set('s6Title', t.s6Title); set('s6Step', t.s6Step);
+  set('btnTakePhoto', t.btnTakePhoto); set('btnUpload', t.btnUpload);
+  set('noImgNote', t.noImgNote);
+  set('btnSubmitTxt', t.btnSubmitTxt); set('btnClearTxt', t.btnClearTxt);
+  set('progTitle', t.progTitle);
+  set('camTitle', t.camTitle);
+
+  // RTL support for Arabic
+  document.getElementById('tab-reg').style.direction = lang === 'ar' ? 'rtl' : 'ltr';
+
+  // Update incident status text if empty
+  if (!document.getElementById('incidentId').value.trim()) {
+    set('incSt', t.incEmpty, 'textContent');
+  }
 }
 </script>
 
@@ -555,19 +906,17 @@ const CLIENT_IDS = {
   'https://api.pulsara.com':              'pulsara:client:prod'
 };
 
-// Pulsara-supported 1D barcode types (matches SIMPLE_BARCODE_TYPES in the platform source)
-// BarcodeDetector format strings mapped from Pulsara's domain constants:
-//   CODABAR → 'codabar', CODE_39 → 'code_39', CODE_93 → 'code_93', CODE_128 → 'code_128'
-const BC_FORMATS = ['codabar','code_39','code_93','code_128'];
+// ⚠ TODO: Set to your entity's PATIENT_WRISTBAND_NUMBER identifier type ID (from Pulsara admin)
+const WRISTBAND_IDENTIFIER_TYPE_ID = null;
+// Confirmed: owner_type integer for PATIENT = 3
+const OWNER_TYPE_PATIENT = 3;
 
-let id_token   = null;
-let camStream  = null;
-let bcStream   = null;
-let bcDetector = null;
-let bcLoop     = null;
-let currentFacingMode = 'environment';
-let isMobile   = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-const allImgs  = [];
+let id_token  = null;
+let camStream = null;
+let bcReader  = null;  // ZXing reader instance
+let bcStream  = null;
+let isMobile  = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+const allImgs = [];
 
 // ── INIT ──────────────────────────────────────────────────────
 (function init() {
@@ -588,94 +937,75 @@ const allImgs  = [];
     try { id_token = atob(p.get('ref')); updateAuthBadge(); slog('[QR AUTH] Token loaded.'); }
     catch(e) { slog('[QR AUTH] Invalid token.', true); }
   }
-
-  // Check BarcodeDetector availability and update scan button
-  checkBarcodeSupport();
+  // Language default: English
+  applyLanguage('en');
 })();
 
-// ── BARCODE DETECTOR SUPPORT CHECK ───────────────────────────
-async function checkBarcodeSupport() {
-  const btn = document.getElementById('scanBtn');
-  if (!('BarcodeDetector' in window)) {
-    btn.disabled = true;
-    btn.title = 'BarcodeDetector API not supported in this browser. Use Chrome on Android or Chrome desktop.';
-    document.getElementById('scanStatus').textContent = '⚠ Barcode scanning not supported in this browser — manual entry only.';
-    document.getElementById('scanStatus').className = 'scan-status err';
-    return;
-  }
-  try {
-    const supported = await BarcodeDetector.getSupportedFormats();
-    const available = BC_FORMATS.filter(f => supported.includes(f));
-    if (!available.length) {
-      btn.disabled = true;
-      document.getElementById('scanStatus').textContent = '⚠ No supported 1D barcode formats on this device.';
-      document.getElementById('scanStatus').className = 'scan-status err';
-    } else {
-      bcDetector = new BarcodeDetector({ formats: available });
-      document.getElementById('scanStatus').textContent = `✓ Scanner ready — supports: ${available.join(', ')}`;
-      document.getElementById('scanStatus').className = 'scan-status ok';
-    }
-  } catch(e) {
-    btn.disabled = true;
-    document.getElementById('scanStatus').textContent = '⚠ Scanner init failed — manual entry only.';
-    document.getElementById('scanStatus').className = 'scan-status err';
-  }
-}
-
-// ── BARCODE SCANNER ───────────────────────────────────────────
+// ── ZXing BARCODE SCANNER ─────────────────────────────────────
+// ZXing-js provides universal 1D barcode decoding across iOS Safari, Android Chrome,
+// and desktop browsers — no native API dependency, works purely via JS + camera stream.
 async function openBarcodeScanner() {
-  if (!bcDetector) { toast('Scanner unavailable — type manually', 'error'); return; }
   document.getElementById('barcodeModal').classList.add('open');
-  document.getElementById('bcHint').textContent = '🔄 Starting camera…';
+  const t = T[currentLang] || T.en;
+  document.getElementById('bcHint').textContent = t.bcStarting;
+
   try {
+    const hints = new Map();
+    const formats = [
+      ZXing.BarcodeFormat.CODE_128,
+      ZXing.BarcodeFormat.CODE_39,
+      ZXing.BarcodeFormat.CODE_93,
+      ZXing.BarcodeFormat.CODABAR
+    ];
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+
+    bcReader = new ZXing.BrowserMultiFormatReader(hints);
+
     const constraints = {
       video: isMobile
         ? { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
         : { width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
     };
+
+    // Get stream independently so we can stop it on close
     bcStream = await navigator.mediaDevices.getUserMedia(constraints);
     const vid = document.getElementById('bcVideo');
     vid.srcObject = bcStream;
     await vid.play();
-    document.getElementById('bcHint').textContent = '📸 Point at a 1D barcode…';
-    startBarcodeLoop(vid);
+    document.getElementById('bcHint').textContent = t.bcScanning;
+
+    // ZXing continuously decodes frames from the video element
+    bcReader.decodeFromVideoElement(vid, (result, err) => {
+      if (result) {
+        const val = result.getText();
+        closeBarcodeScanner();
+        document.getElementById('wristbandId').value = val;
+        const st = document.getElementById('scanStatus');
+        st.textContent = `✅ ${val}`;
+        st.className = 'scan-status ok';
+        toast(`${val}`, 'success');
+        slog(`[BARCODE] ${val} (${result.getBarcodeFormat()})`);
+      }
+    });
+
   } catch(e) {
     toast('Camera unavailable for scanning', 'error');
+    slog(`[BARCODE ERROR] ${e.message}`, true);
     closeBarcodeScanner();
   }
 }
 
-function startBarcodeLoop(vid) {
-  // Poll every 200 ms — matches ML Kit's continuous scanning cadence
-  bcLoop = setInterval(async () => {
-    if (!bcDetector || vid.readyState < 2) return;
-    try {
-      const results = await bcDetector.detect(vid);
-      if (results && results.length > 0) {
-        const val = results[0].rawValue;
-        clearInterval(bcLoop); bcLoop = null;
-        closeBarcodeScanner();
-        document.getElementById('configId').value = val;
-        document.getElementById('scanStatus').textContent = `✅ Scanned: ${val}`;
-        document.getElementById('scanStatus').className = 'scan-status ok';
-        toast(`Config ID scanned: ${val}`, 'success');
-        slog(`[BARCODE SCAN] Value: ${val} | Format: ${results[0].format}`);
-      }
-    } catch(e) { /* ignore detect errors during scanning */ }
-  }, 200);
-}
-
 function closeBarcodeScanner() {
   document.getElementById('barcodeModal').classList.remove('open');
-  if (bcLoop) { clearInterval(bcLoop); bcLoop = null; }
+  if (bcReader) { try { bcReader.reset(); } catch(e){} bcReader = null; }
   if (bcStream) { bcStream.getTracks().forEach(t => t.stop()); bcStream = null; }
 }
 
-function onConfigIdInput() {
-  const v = document.getElementById('configId').value.trim();
+function onWristbandInput() {
+  const v  = document.getElementById('wristbandId').value.trim();
   const st = document.getElementById('scanStatus');
-  if (v) { st.textContent = `✓ Config ID: ${v}`; st.className = 'scan-status ok'; }
+  if (v) { st.textContent = `✓ ${v}`; st.className = 'scan-status ok'; }
   else   { st.textContent = ''; st.className = 'scan-status'; }
 }
 
@@ -685,7 +1015,7 @@ function clientId() { return CLIENT_IDS[apiHost()] || 'pulsara:client:demo'; }
 function onEnvChange() { slog(`[ENV] Switched to ${apiHost()}`); }
 function resolveApiBase(path) { return '/api/pulsara' + path; }
 
-// ── UI ────────────────────────────────────────────────────────
+// ── UI HELPERS ────────────────────────────────────────────────
 function switchTab(name, btn) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -699,8 +1029,7 @@ function slog(msg, isErr) {
   const line = document.createElement('div');
   line.textContent = `[${ts}] ${msg}`;
   if (isErr) line.classList.add('log-err');
-  box.appendChild(line);
-  box.scrollTop = box.scrollHeight;
+  box.appendChild(line); box.scrollTop = box.scrollHeight;
 }
 
 function toast(msg, type) {
@@ -726,14 +1055,16 @@ function updateAuthBadge() {
 function updateIncSt() {
   const v  = document.getElementById('incidentId').value.trim();
   const st = document.getElementById('incSt');
-  if (v) { st.textContent = `✓ Incident ID: ${v}`; st.classList.add('ok'); }
-  else   { st.textContent = 'Enter Incident ID to begin'; st.classList.remove('ok'); }
+  const t  = T[currentLang] || T.en;
+  if (v) { st.textContent = `✓ ${v}`; st.classList.add('ok'); }
+  else   { st.textContent = t.incEmpty; st.classList.remove('ok'); }
 }
 
 function calcAge() {
   const dobStr = document.getElementById('dob').value;
   const ageEl  = document.getElementById('age');
   const hint   = document.getElementById('ageHint');
+  const t      = T[currentLang] || T.en;
   if (dobStr) {
     const dob = new Date(dobStr), now = new Date();
     let age = now.getFullYear() - dob.getFullYear();
@@ -741,17 +1072,18 @@ function calcAge() {
     if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
     ageEl.value = age >= 0 ? age : '';
     ageEl.disabled = true; ageEl.style.opacity = '.5';
-    hint.textContent = 'Calculated from DOB.';
+    hint.textContent = t.hintAgeDob;
   } else {
     ageEl.disabled = false; ageEl.style.opacity = '1';
-    hint.textContent = 'Enter if DOB unknown.';
+    hint.textContent = t.hintAge;
   }
 }
 
 // ── CAMERA (Photos) ───────────────────────────────────────────
+let currentFacingMode = 'environment';
+
 async function openCamera() {
   currentFacingMode = 'environment';
-  document.getElementById('camTypeLabel').textContent = 'Photo';
   document.getElementById('camModal').classList.add('open');
   document.getElementById('flipBtn').style.display = isMobile ? 'flex' : 'none';
   await startCameraStream(currentFacingMode);
@@ -795,8 +1127,7 @@ function snapPhoto() {
 
 function handleFiles(input) {
   Array.from(input.files).forEach(file => { addThumb(URL.createObjectURL(file)); allImgs.push(file); });
-  updateNoImgNote();
-  input.value = '';
+  updateNoImgNote(); input.value = '';
 }
 
 function addThumb(url) {
@@ -819,7 +1150,10 @@ function rmThumb(id) {
 }
 
 function updateNoImgNote() {
-  document.getElementById('noImgNote').style.display = allImgs.length ? 'none' : 'block';
+  const t = T[currentLang] || T.en;
+  const el = document.getElementById('noImgNote');
+  el.style.display = allImgs.length ? 'none' : 'block';
+  if (!allImgs.length) el.textContent = t.noImgNote;
 }
 
 // ── INCIDENT / QR ─────────────────────────────────────────────
@@ -829,7 +1163,7 @@ function generateQR() {
   const inc = document.getElementById('adminIncident').value.trim();
   if (!inc) { toast('Enter an Incident ID first', 'error'); return; }
   if (!id_token) { toast('Log in first — token required for QR', 'error'); return; }
-  const cp = document.getElementById('cpLabel').value.trim();
+  const cp   = document.getElementById('cpLabel').value.trim();
   const base = window.location.href.split('?')[0].split('#')[0];
   let url = `${base}?incident=${encodeURIComponent(inc)}&ref=${encodeURIComponent(btoa(id_token))}`;
   if (cp) url += `&cp=${encodeURIComponent(cp)}`;
@@ -857,8 +1191,7 @@ function copyQrUrl() {
 function downloadQR() {
   const a = document.createElement('a');
   a.download = `pulsara-qr-incident-${document.getElementById('adminIncident').value.trim()}.png`;
-  a.href = document.getElementById('qrCanvas').toDataURL('image/png');
-  a.click();
+  a.href = document.getElementById('qrCanvas').toDataURL('image/png'); a.click();
 }
 
 function printQR() {
@@ -911,23 +1244,26 @@ function doLogout() {
 
 // ── VALIDATION ────────────────────────────────────────────────
 function validate() {
-  const required = [['incidentId','Incident ID'],['firstName','First Name'],['lastName','Last Name'],['cc','Narrative / Notes']];
-  for (const [id, lbl] of required) {
+  const t = T[currentLang] || T.en;
+  const required = [
+    ['incidentId', t.valIncident],
+    ['firstName',  t.valFirst],
+    ['lastName',   t.valLast],
+    ['cc',         t.valCC]
+  ];
+  for (const [id, msg] of required) {
     const el = document.getElementById(id);
     if (!el.value.trim()) {
       el.focus(); el.classList.add('err');
       setTimeout(() => el.classList.remove('err'), 2500);
-      toast(`"${lbl}" is required`, 'error'); return false;
+      toast(msg, 'error'); return false;
     }
   }
-  if (!id_token) { toast('Not logged in — scan a valid QR code or contact admin', 'error'); return false; }
+  if (!id_token) { toast(t.valNoToken, 'error'); return false; }
   return true;
 }
 
 // ── BUILD PAYLOAD ─────────────────────────────────────────────
-// Wristband ID is NOT included here — it is posted separately after channel creation
-// via POST /api/v1/patient-channels/<id>/identifiers with category PATIENT_WRISTBAND_NUMBER.
-// This is what powers "Scan to Find" / "Scan to Add" in the Pulsara mobile app.
 function buildPayload() {
   const dobStr = document.getElementById('dob').value;
   const phone  = document.getElementById('phone').value.trim();
@@ -978,46 +1314,43 @@ async function createPatient(payload) {
 }
 
 // ── POST WRISTBAND IDENTIFIER ─────────────────────────────────
-// Uses POST /api/v1/patient-channels/<id>/identifiers
-// Category: PATIENT_WRISTBAND_NUMBER — this is what powers "Scan to Find" / "Scan to Add"
-// in the Pulsara mobile app (Service::PatientScan / TBL_PATIENT_EXTERNAL_IDS).
-// The type.id must match a PATIENT_WRISTBAND_NUMBER type configured for your entity.
-// ⚠ Confirm the correct type.id with your Pulsara admin — it is entity-specific.
-const WRISTBAND_IDENTIFIER_TYPE_ID = null; // TODO: set to your entity's wristband type ID
-
 async function postWristbandIdentifier(pid, value) {
   if (!WRISTBAND_IDENTIFIER_TYPE_ID) {
-    slog('[WRISTBAND] ⚠ WRISTBAND_IDENTIFIER_TYPE_ID not set — skipping identifier post. Set this to your entity\'s PATIENT_WRISTBAND_NUMBER type ID.', true);
+    slog('[WRISTBAND] ⚠ WRISTBAND_IDENTIFIER_TYPE_ID not set — skipping. Ask your Pulsara admin for the PATIENT_WRISTBAND_NUMBER type ID.', true);
     return;
   }
-  slog(`[WRISTBAND] POST /api/v1/patient-channels/${pid}/identifiers | value: ${value} | type_id: ${WRISTBAND_IDENTIFIER_TYPE_ID}`);
+  slog(`[WRISTBAND] POST /identifiers | pid:${pid} val:${value} type:${WRISTBAND_IDENTIFIER_TYPE_ID}`);
   const r = await fetch(resolveApiBase(`/api/v1/patient-channels/${pid}/identifiers`), {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${id_token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ value, type: { id: WRISTBAND_IDENTIFIER_TYPE_ID } })
   });
-  slog(`[WRISTBAND STATUS] ${r.status}`);
+  slog(`[WRISTBAND] HTTP ${r.status}`);
   const body = await r.json().catch(() => ({}));
   slog(`[WRISTBAND RESPONSE] ${JSON.stringify(body)}`);
-  if (!r.ok) throw new Error(`Wristband identifier failed (${r.status}): ${JSON.stringify(body)}`);
+  if (!r.ok) throw new Error(`Wristband failed (${r.status}): ${JSON.stringify(body)}`);
   return body;
 }
 
 // ── UPLOAD ATTACHMENT ─────────────────────────────────────────
-const OWNER_TYPE_PATIENT = 3;
+// POST /api/v2/attachments — confirmed by Pulsara API expert for Bearer token auth
+// owner_type = 3 (PATIENT) — confirmed
+// suppress_alerts: false on first image (fires one notification), true on subsequent
 async function uploadAttachment(pid, file, suppressAlerts) {
   const fd = new FormData();
-  fd.append('owner_id', pid); fd.append('owner_type', OWNER_TYPE_PATIENT);
-  fd.append('file', file); fd.append('suppress_alerts', suppressAlerts ? 'true' : 'false');
-  slog(`[ATTACH] ${file.name} (${(file.size/1024).toFixed(1)} KB) | suppress=${suppressAlerts}`);
+  fd.append('owner_id',        pid);
+  fd.append('owner_type',      OWNER_TYPE_PATIENT);
+  fd.append('file',            file);
+  fd.append('suppress_alerts', suppressAlerts ? 'true' : 'false');
+  slog(`[ATTACH] ${file.name} (${(file.size/1024).toFixed(1)} KB) suppress=${suppressAlerts}`);
   const r = await fetch(resolveApiBase('/api/v2/attachments'), {
     method: 'POST', headers: { 'Authorization': `Bearer ${id_token}` }, body: fd
   });
-  slog(`[ATTACH STATUS] ${r.status}`);
+  slog(`[ATTACH] HTTP ${r.status}`);
   const bodyText = await r.text();
   let body; try { body = JSON.parse(bodyText); } catch {}
   if (body) slog(`[ATTACH RESPONSE] ${JSON.stringify(body)}`);
-  if (!r.ok) throw new Error(`Attachment failed ${r.status}: ${bodyText.substring(0,200)}`);
+  if (!r.ok) throw new Error(`Attachment failed (${r.status}): ${bodyText.substring(0,200)}`);
   return body;
 }
 
@@ -1033,10 +1366,9 @@ async function saveRecord() {
     const pid = patient.id || patient.patient_id;
     slog(`[CREATE SUCCESS] Patient ID: ${pid}`);
 
-    // Step 1b — Post wristband identifier if provided
-    const wristbandVal = document.getElementById('configId').value.trim();
+    const wristbandVal = document.getElementById('wristbandId').value.trim();
     if (wristbandVal) {
-      setP(20, 'Posting wristband identifier…', 'Step 1b of 3');
+      setP(22, 'Posting wristband identifier…', 'Step 1b of 3');
       try { await postWristbandIdentifier(pid, wristbandVal); }
       catch(e) { slog(`[WRISTBAND SKIPPED] ${e.message}`, true); }
     }
@@ -1049,9 +1381,10 @@ async function saveRecord() {
         catch(e) { slog(`[IMAGE ${i+1} SKIPPED] ${e.message}`, true); }
       }
     } else {
-      setP(85, 'No images to upload', 'Step 2 of 3');
+      setP(85, 'No images to upload.', 'Step 2 of 3');
       await new Promise(r => setTimeout(r, 400));
     }
+
     setP(100, 'Complete!', 'Step 3 of 3');
     await new Promise(r => setTimeout(r, 800));
     document.getElementById('prog').classList.remove('open');
@@ -1066,21 +1399,22 @@ async function saveRecord() {
 
 // ── CLEAR FORM ────────────────────────────────────────────────
 function clearForm() {
-  if (!confirm('Clear all form data?')) return;
-  ['firstName','lastName','dob','age','phone','address','city','state','zip','cc','configId']
+  const t = T[currentLang] || T.en;
+  if (!confirm(t.confirmClear)) return;
+  ['firstName','lastName','dob','age','phone','address','city','state','zip','cc','wristbandId']
     .forEach(id => document.getElementById(id).value = '');
   const ageEl = document.getElementById('age');
   ageEl.disabled = false; ageEl.style.opacity = '1';
-  document.getElementById('ageHint').textContent = 'Enter if DOB unknown.';
+  document.getElementById('ageHint').textContent = t.hintAge;
   document.getElementById('ccCount').textContent = '0';
   document.querySelectorAll('input[name="gender"]').forEach(r => r.checked = false);
-  document.getElementById('scanStatus').textContent = '';
-  document.getElementById('scanStatus').className = 'scan-status';
+  const st = document.getElementById('scanStatus');
+  st.textContent = ''; st.className = 'scan-status';
   allImgs.length = 0;
   document.getElementById('trow').innerHTML = '';
   document.getElementById('prevArea').style.display = 'none';
   updateNoImgNote();
-  toast('Form cleared', '');
+  toast(t.toastCleared, '');
 }
 </script>
 </body>
