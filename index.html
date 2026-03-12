@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Community Registration Client · Pulsara</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.20.0/zxing.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.19.1/zxing.min.js"></script>
 <style>
 :root{
   --teal:#00b5ad;--teal-d:#009690;--teal-m:#007b75;
@@ -950,33 +950,32 @@ async function openBarcodeScanner() {
   document.getElementById('bcHint').textContent = t.bcStarting;
 
   try {
-    const hints = new Map();
-    const formats = [
-      ZXing.BarcodeFormat.CODE_128,
-      ZXing.BarcodeFormat.CODE_39,
-      ZXing.BarcodeFormat.CODE_93,
-      ZXing.BarcodeFormat.CODABAR
-    ];
-    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+    // Resolve ZXing — the cdnjs UMD build exposes the library as window.ZXing
+    // BrowserMultiFormatReader handles all supported 1D formats automatically
+    const ZX = window.ZXing;
+    if (!ZX || !ZX.BrowserMultiFormatReader) {
+      throw new Error('ZXing library not loaded. Check network/CDN.');
+    }
 
-    bcReader = new ZXing.BrowserMultiFormatReader(hints);
-
+    // Request camera permission explicitly first — same as photo camera flow
     const constraints = {
       video: isMobile
         ? { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-        : { width: { ideal: 1280 }, height: { ideal: 720 } },
+        : { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
     };
-
-    // Get stream independently so we can stop it on close
     bcStream = await navigator.mediaDevices.getUserMedia(constraints);
+
     const vid = document.getElementById('bcVideo');
     vid.srcObject = bcStream;
     await vid.play();
     document.getElementById('bcHint').textContent = t.bcScanning;
 
-    // ZXing continuously decodes frames from the video element
-    bcReader.decodeFromVideoElement(vid, (result, err) => {
+    // Create reader after stream is confirmed live
+    bcReader = new ZX.BrowserMultiFormatReader();
+
+    // Continuously decode frames — ZXing polls internally
+    bcReader.decodeFromStream(bcStream, vid, (result, err) => {
       if (result) {
         const val = result.getText();
         closeBarcodeScanner();
@@ -985,13 +984,19 @@ async function openBarcodeScanner() {
         st.textContent = `✅ ${val}`;
         st.className = 'scan-status ok';
         toast(`${val}`, 'success');
-        slog(`[BARCODE] ${val} (${result.getBarcodeFormat()})`);
+        slog(`[BARCODE] ${val} (format: ${result.getBarcodeFormat()})`);
       }
+      // Non-result errors during scanning (no barcode in frame) are normal — ignore them
     });
 
   } catch(e) {
-    toast('Camera unavailable for scanning', 'error');
-    slog(`[BARCODE ERROR] ${e.message}`, true);
+    const msg = e.name === 'NotAllowedError'
+      ? 'Camera permission denied — please allow camera access and try again.'
+      : e.name === 'NotFoundError'
+      ? 'No camera found on this device.'
+      : `Scanner error: ${e.message}`;
+    toast(msg, 'error');
+    slog(`[BARCODE ERROR] ${e.name}: ${e.message}`, true);
     closeBarcodeScanner();
   }
 }
