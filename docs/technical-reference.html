@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Community Registration Client — Technical Documentation</title>
+<style>
+:root{
+  --teal:#00b5ad;--teal-d:#007b75;--teal-l:#e0f5f4;
+  --text:#1a2233;--muted:#5a6a85;--border:#dde3ec;
+  --bg:#f4f6f9;--white:#fff;--red:#e53935;--ok:#2e7d32;
+  --warn:#f57c00;--code-bg:#0d1b2a;--code-fg:#7ececa;
+  --shadow:0 2px 12px rgba(0,0,0,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;}
+/* ── NAV ── */
+nav{position:sticky;top:0;z-index:100;background:var(--teal-d);color:#fff;display:flex;align-items:center;gap:0;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.nav-title{padding:12px 20px;font-weight:800;font-size:1rem;white-space:nowrap;border-right:1px solid rgba(255,255,255,.2);}
+.nav-links{display:flex;flex-wrap:wrap;gap:0;}
+.nav-links a{color:rgba(255,255,255,.85);text-decoration:none;padding:12px 14px;font-size:.8rem;font-weight:600;transition:background .15s;}
+.nav-links a:hover{background:rgba(255,255,255,.15);color:#fff;}
+/* ── LAYOUT ── */
+.page{max-width:1100px;margin:0 auto;padding:28px 24px 60px;}
+/* ── SECTIONS ── */
+.section{background:var(--white);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;box-shadow:var(--shadow);overflow:hidden;}
+.section-head{background:linear-gradient(90deg,var(--teal-d),var(--teal));color:#fff;padding:16px 24px;display:flex;align-items:center;gap:12px;}
+.section-head h2{font-size:1.05rem;font-weight:800;}
+.section-num{background:rgba(255,255,255,.25);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;flex-shrink:0;}
+.section-body{padding:22px 24px;}
+/* ── TYPOGRAPHY ── */
+h3{font-size:.95rem;font-weight:800;color:var(--teal-d);margin:20px 0 8px;border-bottom:2px solid var(--teal-l);padding-bottom:5px;}
+h3:first-child{margin-top:0;}
+h4{font-size:.87rem;font-weight:700;color:var(--text);margin:14px 0 6px;}
+p{margin-bottom:10px;color:var(--text);}
+ul,ol{padding-left:20px;margin-bottom:12px;}
+li{margin-bottom:4px;}
+strong{color:var(--text);}
+/* ── CODE ── */
+code{background:var(--teal-l);color:var(--teal-d);padding:2px 6px;border-radius:4px;font-size:.82rem;font-family:monospace;}
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:10px;padding:16px 18px;overflow-x:auto;font-size:.8rem;line-height:1.6;margin:10px 0 16px;}
+/* ── TABLES ── */
+.tbl-wrap{overflow-x:auto;margin:10px 0 16px;}
+table{width:100%;border-collapse:collapse;font-size:.83rem;}
+thead tr{background:var(--teal-d);color:#fff;}
+thead th{padding:10px 12px;text-align:left;font-weight:700;white-space:nowrap;}
+tbody tr:nth-child(even){background:var(--teal-l);}
+tbody tr:hover{background:#d4f0ef;}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+td code{font-size:.78rem;}
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:.72rem;font-weight:700;}
+.badge-req{background:#fce8e8;color:#b71c1c;}
+.badge-opt{background:#e8f5e9;color:#2e7d32;}
+.badge-auto{background:#fff3e0;color:#e65100;}
+.badge-api{background:var(--teal-l);color:var(--teal-d);}
+/* ── DIAGRAM ── */
+.diagram{background:var(--code-bg);border-radius:12px;padding:24px;overflow-x:auto;margin:10px 0 16px;}
+.diagram svg{display:block;max-width:100%;}
+/* ── CALLOUT ── */
+.callout{border-left:4px solid var(--teal);background:var(--teal-l);padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0;font-size:.87rem;}
+.callout.warn{border-color:var(--warn);background:#fff8e1;}
+.callout.danger{border-color:var(--red);background:#fce8e8;}
+/* ── STEP LIST ── */
+.steps{counter-reset:step;display:flex;flex-direction:column;gap:12px;margin:12px 0;}
+.step-item{display:flex;gap:14px;align-items:flex-start;}
+.step-num{counter-increment:step;content:counter(step);background:var(--teal);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.82rem;flex-shrink:0;margin-top:2px;}
+.step-body{flex:1;}
+/* ── GRID ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.card-sm{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.card-sm h4{margin-top:0;}
+/* ── HERO ── */
+.hero{background:linear-gradient(135deg,var(--teal-d) 0%,var(--teal) 100%);color:#fff;border-radius:14px;padding:30px 28px;margin-bottom:28px;box-shadow:var(--shadow);}
+.hero h1{font-size:1.5rem;font-weight:900;margin-bottom:6px;}
+.hero p{opacity:.9;font-size:.92rem;margin-bottom:0;}
+.hero-meta{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;}
+.hero-tag{background:rgba(255,255,255,.2);border-radius:20px;padding:4px 14px;font-size:.78rem;font-weight:700;}
+@media(max-width:680px){
+  .g2{grid-template-columns:1fr;}
+  nav{flex-direction:column;align-items:flex-start;}
+  .nav-title{border-right:none;border-bottom:1px solid rgba(255,255,255,.2);width:100%;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-title">📋 CRC Docs</div>
+  <div class="nav-links">
+    <a href="#s0">Rollout Plan</a>
+    <a href="#s1">Overview</a>
+    <a href="#s2">Build & Deploy</a>
+    <a href="#s3">Network Diagram</a>
+    <a href="#s4">Sequence Diagram</a>
+    <a href="#s5">Field Mapping</a>
+    <a href="#s6">Field Logic</a>
+    <a href="#s7">Open Source</a>
+    <a href="#s8">Security</a>
+    <a href="#s9">Known Limits</a>
+    <a href="#s10">Future</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="hero">
+    <h1>🛡️ Community Registration Client</h1>
+    <p>Technical Reference · Powered by Pulsara · Disaster Assistance &amp; Collection Point Portal</p>
+    <div class="hero-meta">
+      <span class="hero-tag">Version 1.0</span>
+      <span class="hero-tag">Static HTML / Vanilla JS</span>
+      <span class="hero-tag">Vercel-Hosted</span>
+      <span class="hero-tag">Pulsara API v1/v2</span>
+      <span class="hero-tag">HIPAA-Aware</span>
+    </div>
+  </div>
+
+  <!-- ══ ROLLOUT PLAN ══ -->
+  <div class="section" id="s0">
+    <div class="section-head"><div class="section-num">🗺</div><h2>Product Rollout Plan</h2></div>
+    <div class="section-body">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Phase</th><th>Name</th><th>Description</th><th>Key Milestone</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-api">Phase 0</span></td>
+              <td><strong>Discovery &amp; Demo</strong></td>
+              <td>Requirements refinement, stakeholder demos, UI/UX iteration. Establish core field mappings and Pulsara API integration patterns. Define target workflows (disaster, ETN, World Cup, missing persons).</td>
+              <td>Signed-off requirements document; working demo environment</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-opt">Beta 1</span></td>
+              <td><strong>Single Customer Pilot — STRAC</strong></td>
+              <td>Deploy the current application as-is for Southwest Texas Regional Advisory Council (STRAC). Collect real-world feedback on field workflows, barcode scanning, multilingual usage, and Pulsara data quality.</td>
+              <td>Live at STRAC; feedback report; Pulsara data validation confirmed</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-warn" style="background:#fff3e0;color:#e65100;">Beta 2</span></td>
+              <td><strong>Incident-Embedded QR Generation</strong></td>
+              <td>Embed the QR code generation workflow directly inside the Pulsara Incident Object — so when an incident is created in Pulsara, a registration QR is auto-generated and distributable without a separate admin step.</td>
+              <td>QR generation triggered from Pulsara incident creation; no separate admin login needed for QR</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-req">Future</span></td>
+              <td><strong>Expanded Distribution Options</strong></td>
+              <td>
+                <strong>a) Third-Party App</strong> — Package as a white-labeled web app for partner organizations (EMS agencies, state DOH, EOCs).<br/><br/>
+                <strong>b) Apple / Google Stores</strong> — Wrap in a PWA or React Native shell for native app distribution; enables offline mode, push notifications, and app store discoverability.<br/><br/>
+                <strong>c) Open Source</strong> — Release the CRC codebase publicly under an open-source license (e.g. Apache 2.0) to enable community contribution, NGO adoption, and third-party extension.<br/><br/>
+                <strong>d) Built-in within Pulsara</strong> — Deeply integrate the registration client as a first-class feature of the Pulsara platform — accessible directly from the Pulsara web/mobile UI for incident commanders.
+              </td>
+              <td>TBD per strategic decision</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 1. OVERVIEW ══ -->
+  <div class="section" id="s1">
+    <div class="section-head"><div class="section-num">1</div><h2>Project Overview</h2></div>
+    <div class="section-body">
+      <h3>Purpose</h3>
+      <p>The <strong>Community Registration Client (CRC)</strong> is a browser-based intake form designed for use at disaster collection points and emergency shelters. Staff (or self-registering evacuees via QR code) complete the form, and on submission a <strong>Pulsara Patient Channel</strong> is created in real time — including photos — directly linked to the active incident.</p>
+
+      <h3>Strategic Goals</h3>
+      <p>Beyond operational intake, the CRC represents a broader platform vision:</p>
+      <ul>
+        <li><strong>Ultimate goal:</strong> Enable flexible, credentialless interactions — allowing people <em>outside</em> of Pulsara to add patients, persons, pets, and belongings to the Pulsara network without requiring a Pulsara account. The QR-token model is the first step toward this.</li>
+      </ul>
+      <h4>Target Workflow Verticals</h4>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Vertical</th><th>Use Case</th><th>Key Need</th></tr></thead>
+          <tbody>
+            <tr><td>🏆 World Cup / Mass Gathering</td><td>Non-Pulsara users from multiple countries registering patients or persons at a large-scale event</td><td>Multilingual, no Pulsara credentials required, high-volume throughput</td></tr>
+            <tr><td>🌀 ETN / TDEM Workflows</td><td>Texas Department of Emergency Management using CRC for statewide disaster response coordination</td><td>Integration with state EOC systems, scalable incident management</td></tr>
+            <tr><td>🔍 Missing Persons</td><td>Community members reporting a missing loved one; responders tracking unaccounted persons across shelters</td><td>Alternate form mode, family-submitted data, cross-reference with registered persons</td></tr>
+            <tr><td>🏠 Assisted Living / FLDOH</td><td>Florida Department of Health and assisted living facilities tracking vulnerable residents during evacuation</td><td>Pre-populated resident lists, caregiver-assisted registration, medical context fields</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Core Capabilities</h3>
+      <div class="g2">
+        <div class="card-sm">
+          <h4>📋 Registration</h4>
+          <ul>
+            <li>Person, Pet, or Belonging registration types</li>
+            <li>Demographics, address, narrative</li>
+            <li>Associate Person ID for Pet/Belonging linkage</li>
+            <li>Auto-appended field preview in real time</li>
+          </ul>
+        </div>
+        <div class="card-sm">
+          <h4>📷 Media</h4>
+          <ul>
+            <li>Live camera capture (front/rear flip)</li>
+            <li>File upload (drag &amp; drop or browse)</li>
+            <li>Multiple images per registration</li>
+            <li>Uploaded to Pulsara as attachments</li>
+          </ul>
+        </div>
+        <div class="card-sm">
+          <h4>🏷️ Wristband Scanning</h4>
+          <ul>
+            <li>ZXing barcode scanner (no native app needed)</li>
+            <li>Supports CODE-128, CODE-39, CODE-93, CODABAR</li>
+            <li>Wristband ID → Pulsara Identifier field</li>
+            <li>Associate Person scan for Pet/Belonging</li>
+          </ul>
+        </div>
+        <div class="card-sm">
+          <h4>📱 QR / Admin</h4>
+          <ul>
+            <li>Admin tab: login, environment select, incident setup</li>
+            <li>QR code generation with embedded auth token</li>
+            <li>Download / print / copy QR sheet</li>
+            <li>Activity log for real-time debugging</li>
+          </ul>
+        </div>
+        <div class="card-sm">
+          <h4>🌐 Multilingual</h4>
+          <ul>
+            <li>10 languages: EN, ES, ZH, TL, VI, AR, FR, KO, RU, HT</li>
+            <li>Full UI translation including placeholders &amp; errors</li>
+            <li>RTL support for Arabic</li>
+          </ul>
+        </div>
+        <div class="card-sm">
+          <h4>🔒 Security</h4>
+          <ul>
+            <li>OAuth 2.0 Bearer token authentication</li>
+            <li>All API calls server-proxied via Vercel (no CORS)</li>
+            <li>QR token treated as session credential</li>
+            <li>No data stored in browser (no localStorage)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 2. BUILD & DEPLOY ══ -->
+  <div class="section" id="s2">
+    <div class="section-head"><div class="section-num">2</div><h2>Build &amp; Deployment Architecture</h2></div>
+    <div class="section-body">
+
+      <h3>Technology Stack</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>Frontend</td><td>HTML5 + Vanilla JavaScript (ES2020)</td><td>Single-file SPA — no build step, no framework</td></tr>
+            <tr><td>Styling</td><td>Custom CSS (CSS Variables, Grid, Flexbox)</td><td>Responsive, WCAG-aware design system</td></tr>
+            <tr><td>Barcode Scanning</td><td>ZXing Library (ESM, via esm.sh CDN)</td><td>In-browser 1D barcode decode from live video</td></tr>
+            <tr><td>QR Generation</td><td>api.qrserver.com (external REST API)</td><td>Server-rendered QR image returned as PNG</td></tr>
+            <tr><td>Hosting</td><td>Vercel (static hosting)</td><td>Serves <code>index.html</code>; handles proxy rewrites</td></tr>
+            <tr><td>API Proxy</td><td>Vercel Rewrites (<code>vercel.json</code>)</td><td>Forwards <code>/api/pulsara/*</code> → Pulsara backend, eliminating CORS</td></tr>
+            <tr><td>Source Control</td><td>GitHub</td><td>Repo stores <code>index.html</code> + <code>vercel.json</code>; auto-deploys on push</td></tr>
+            <tr><td>Backend API</td><td>Pulsara REST API v1 / v2</td><td>Patient channel creation, identifier posting, attachment upload</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Repository Structure</h3>
+      <pre>repo-root/
+├── index.html        ← Entire application (HTML + CSS + JS, single file)
+└── vercel.json       ← Vercel proxy rewrite rules</pre>
+
+      <h3>vercel.json — Proxy Rewrite Rule</h3>
+      <p>All browser requests to <code>/api/pulsara/…</code> are forwarded server-side by Vercel to Pulsara's API. The browser never makes a cross-origin request, eliminating CORS entirely.</p>
+      <pre>{
+  "rewrites": [
+    {
+      "source": "/api/pulsara/:path*",
+      "destination": "https://us-internal-demo.pulsara.com/:path*"
+    }
+  ]
+}</pre>
+      <div class="callout warn">⚠️ Switch the <code>destination</code> to <code>https://api.pulsara.com/:path*</code> for production deployment.</div>
+
+      <h3>Deployment Pipeline</h3>
+      <div class="steps">
+        <div class="step-item"><div class="step-num">1</div><div class="step-body"><strong>Edit code</strong> — Update <code>index.html</code> locally or via GitHub web editor.</div></div>
+        <div class="step-item"><div class="step-num">2</div><div class="step-body"><strong>Push to GitHub</strong> — <code>git push origin main</code> (or commit via web UI).</div></div>
+        <div class="step-item"><div class="step-num">3</div><div class="step-body"><strong>Vercel auto-detects</strong> the push via GitHub webhook and triggers a new build.</div></div>
+        <div class="step-item"><div class="step-num">4</div><div class="step-body"><strong>Build completes</strong> in ~30–60 seconds. Static files are distributed to Vercel's CDN edge nodes.</div></div>
+        <div class="step-item"><div class="step-num">5</div><div class="step-body"><strong>Live URL</strong> (e.g. <code>https://community-registration-xxx.vercel.app</code>) is updated immediately.</div></div>
+      </div>
+
+      <h3>Admin Setup Workflow (First-Time)</h3>
+      <div class="steps">
+        <div class="step-item"><div class="step-num">1</div><div class="step-body">Open the app URL → click <strong>Admin / Setup</strong> tab.</div></div>
+        <div class="step-item"><div class="step-num">2</div><div class="step-body">Select environment (Demo or Production) from the dropdown.</div></div>
+        <div class="step-item"><div class="step-num">3</div><div class="step-body">Enter Pulsara credentials → click <strong>Login</strong>. An OAuth Bearer token is retrieved and stored in memory.</div></div>
+        <div class="step-item"><div class="step-num">4</div><div class="step-body">Enter the <strong>Incident ID</strong> (from Pulsara) and optional Collection Point label.</div></div>
+        <div class="step-item"><div class="step-num">5</div><div class="step-body">Click <strong>Generate QR Code</strong> → share/print the QR sheet for registrants to self-register.</div></div>
+        <div class="step-item"><div class="step-num">6</div><div class="step-body">Alternatively, click <strong>Push to Registration Form</strong> for staff-assisted registration on the same device.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 3. NETWORK DIAGRAM ══ -->
+  <div class="section" id="s3">
+    <div class="section-head"><div class="section-num">3</div><h2>Network Architecture Diagram</h2></div>
+    <div class="section-body">
+      <div class="diagram">
+        <svg viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI',sans-serif">
+          <!-- Background zones -->
+          <rect x="10" y="10" width="260" height="400" rx="12" fill="#0d2a28" stroke="#00b5ad" stroke-width="1.5"/>
+          <text x="140" y="34" text-anchor="middle" fill="#7ececa" font-size="11" font-weight="700">BROWSER / CLIENT DEVICE</text>
+
+          <rect x="320" y="10" width="220" height="400" rx="12" fill="#0d1b2a" stroke="#4a90a4" stroke-width="1.5"/>
+          <text x="430" y="34" text-anchor="middle" fill="#7ececa" font-size="11" font-weight="700">VERCEL EDGE (Server)</text>
+
+          <rect x="590" y="10" width="300" height="400" rx="12" fill="#1a0d2a" stroke="#9c6fd6" stroke-width="1.5"/>
+          <text x="740" y="34" text-anchor="middle" fill="#c9b0f0" font-size="11" font-weight="700">PULSARA CLOUD</text>
+
+          <!-- Client boxes -->
+          <rect x="30" y="50" width="220" height="50" rx="8" fill="#00b5ad" opacity=".15" stroke="#00b5ad" stroke-width="1"/>
+          <text x="140" y="70" text-anchor="middle" fill="#7ececa" font-size="11" font-weight="700">Staff / Registrant Browser</text>
+          <text x="140" y="86" text-anchor="middle" fill="#5ab8b3" font-size="10">index.html (SPA)</text>
+
+          <rect x="30" y="115" width="220" height="40" rx="8" fill="#00b5ad" opacity=".1" stroke="#00b5ad" stroke-width="1"/>
+          <text x="140" y="130" text-anchor="middle" fill="#7ececa" font-size="10" font-weight="700">ZXing Barcode Scanner</text>
+          <text x="140" y="145" text-anchor="middle" fill="#5ab8b3" font-size="9">WebRTC Camera / ESM Module</text>
+
+          <rect x="30" y="168" width="220" height="40" rx="8" fill="#00b5ad" opacity=".1" stroke="#00b5ad" stroke-width="1"/>
+          <text x="140" y="183" text-anchor="middle" fill="#7ececa" font-size="10" font-weight="700">Camera / File Upload</text>
+          <text x="140" y="198" text-anchor="middle" fill="#5ab8b3" font-size="9">navigator.mediaDevices / File API</text>
+
+          <rect x="30" y="221" width="220" height="40" rx="8" fill="#00b5ad" opacity=".1" stroke="#00b5ad" stroke-width="1"/>
+          <text x="140" y="236" text-anchor="middle" fill="#7ececa" font-size="10" font-weight="700">QR Code Viewer</text>
+          <text x="140" y="251" text-anchor="middle" fill="#5ab8b3" font-size="9">api.qrserver.com (external img src)</text>
+
+          <rect x="30" y="274" width="220" height="40" rx="8" fill="#00b5ad" opacity=".1" stroke="#00b5ad" stroke-width="1"/>
+          <text x="140" y="289" text-anchor="middle" fill="#7ececa" font-size="10" font-weight="700">In-Memory Token Store</text>
+          <text x="140" y="304" text-anchor="middle" fill="#5ab8b3" font-size="9">id_token JS variable (no localStorage)</text>
+
+          <!-- Vercel boxes -->
+          <rect x="340" y="50" width="180" height="50" rx="8" fill="#4a90a4" opacity=".2" stroke="#4a90a4" stroke-width="1"/>
+          <text x="430" y="70" text-anchor="middle" fill="#7ececa" font-size="11" font-weight="700">Static File Serving</text>
+          <text x="430" y="86" text-anchor="middle" fill="#5ab8b3" font-size="10">CDN-distributed index.html</text>
+
+          <rect x="340" y="115" width="180" height="50" rx="8" fill="#4a90a4" opacity=".2" stroke="#4a90a4" stroke-width="1"/>
+          <text x="430" y="135" text-anchor="middle" fill="#7ececa" font-size="11" font-weight="700">Proxy Rewrite Engine</text>
+          <text x="430" y="151" text-anchor="middle" fill="#5ab8b3" font-size="10">/api/pulsara/* → Pulsara</text>
+
+          <rect x="340" y="180" width="180" height="40" rx="8" fill="#4a90a4" opacity=".1" stroke="#4a90a4" stroke-width="1"/>
+          <text x="430" y="195" text-anchor="middle" fill="#7ececa" font-size="10" font-weight="700">Auth Header Pass-Through</text>
+          <text x="430" y="210" text-anchor="middle" fill="#5ab8b3" font-size="9">Bearer token forwarded as-is</text>
+
+          <rect x="340" y="234" width="180" height="40" rx="8" fill="#4a90a4" opacity=".1" stroke="#4a90a4" stroke-width="1"/>
+          <text x="430" y="249" text-anchor="middle" fill="#7ececa" font-size="10" font-weight="700">GitHub Auto-Deploy</text>
+          <text x="430" y="264" text-anchor="middle" fill="#5ab8b3" font-size="9">Push → build → live in ~60s</text>
+
+          <!-- Pulsara boxes -->
+          <rect x="610" y="50" width="260" height="50" rx="8" fill="#9c6fd6" opacity=".2" stroke="#9c6fd6" stroke-width="1"/>
+          <text x="740" y="70" text-anchor="middle" fill="#c9b0f0" font-size="11" font-weight="700">OAuth2 Token Endpoint</text>
+          <text x="740" y="86" text-anchor="middle" fill="#a080c0" font-size="10">POST /api/v2/oauth2/token</text>
+
+          <rect x="610" y="115" width="260" height="50" rx="8" fill="#9c6fd6" opacity=".2" stroke="#9c6fd6" stroke-width="1"/>
+          <text x="740" y="135" text-anchor="middle" fill="#c9b0f0" font-size="11" font-weight="700">Patient Channel API</text>
+          <text x="740" y="151" text-anchor="middle" fill="#a080c0" font-size="10">POST /api/v1/patient-channels</text>
+
+          <rect x="610" y="180" width="260" height="50" rx="8" fill="#9c6fd6" opacity=".2" stroke="#9c6fd6" stroke-width="1"/>
+          <text x="740" y="200" text-anchor="middle" fill="#c9b0f0" font-size="11" font-weight="700">Identifier API</text>
+          <text x="740" y="216" text-anchor="middle" fill="#a080c0" font-size="10">POST /api/v1/patient-channels/{id}/identifiers</text>
+
+          <rect x="610" y="245" width="260" height="50" rx="8" fill="#9c6fd6" opacity=".2" stroke="#9c6fd6" stroke-width="1"/>
+          <text x="740" y="265" text-anchor="middle" fill="#c9b0f0" font-size="11" font-weight="700">Attachment API</text>
+          <text x="740" y="281" text-anchor="middle" fill="#a080c0" font-size="10">POST /api/v2/attachments</text>
+
+          <rect x="610" y="310" width="260" height="40" rx="8" fill="#9c6fd6" opacity=".15" stroke="#9c6fd6" stroke-width="1"/>
+          <text x="740" y="326" text-anchor="middle" fill="#c9b0f0" font-size="10" font-weight="700">Incident Collaboration</text>
+          <text x="740" y="341" text-anchor="middle" fill="#a080c0" font-size="9">add_collaborations[ {collaboration_id} ]</text>
+
+          <!-- ARROWS: Browser → Vercel -->
+          <line x1="250" y1="75" x2="340" y2="75" stroke="#00b5ad" stroke-width="2" marker-end="url(#arr-teal)"/>
+          <text x="295" y="69" text-anchor="middle" fill="#00b5ad" font-size="9">HTTPS GET</text>
+
+          <line x1="250" y1="140" x2="340" y2="140" stroke="#00b5ad" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-teal)"/>
+          <line x1="250" y1="200" x2="340" y2="200" stroke="#00b5ad" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-teal)"/>
+          <line x1="250" y1="254" x2="340" y2="200" stroke="#00b5ad" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-teal)"/>
+
+          <!-- ARROWS: Vercel → Pulsara -->
+          <line x1="520" y1="75" x2="610" y2="75" stroke="#9c6fd6" stroke-width="2" marker-end="url(#arr-purple)"/>
+          <line x1="520" y1="140" x2="610" y2="140" stroke="#9c6fd6" stroke-width="1.5" marker-end="url(#arr-purple)"/>
+          <line x1="520" y1="205" x2="610" y2="205" stroke="#9c6fd6" stroke-width="1.5" marker-end="url(#arr-purple)"/>
+          <line x1="520" y1="205" x2="610" y2="270" stroke="#9c6fd6" stroke-width="1.5" marker-end="url(#arr-purple)"/>
+
+          <text x="565" y="69" text-anchor="middle" fill="#9c6fd6" font-size="9">Server-proxy</text>
+          <text x="565" y="133" text-anchor="middle" fill="#9c6fd6" font-size="9">Bearer token</text>
+
+          <!-- ARROW defs -->
+          <defs>
+            <marker id="arr-teal" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#00b5ad"/>
+            </marker>
+            <marker id="arr-purple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#9c6fd6"/>
+            </marker>
+          </defs>
+
+          <!-- Legend -->
+          <rect x="30" y="350" width="840" height="52" rx="8" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+          <line x1="50" y1="375" x2="90" y2="375" stroke="#00b5ad" stroke-width="2"/>
+          <text x="95" y="379" fill="#7ececa" font-size="10">Browser → Vercel (same-origin HTTPS)</text>
+          <line x1="280" y1="375" x2="320" y2="375" stroke="#9c6fd6" stroke-width="2"/>
+          <text x="325" y="379" fill="#c9b0f0" font-size="10">Vercel → Pulsara (server-side proxy, no CORS)</text>
+          <line x1="560" y1="375" x2="600" y2="375" stroke="#00b5ad" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <text x="605" y="379" fill="#7ececa" font-size="10">Browser-native (camera, file API)</text>
+        </svg>
+      </div>
+
+      <div class="callout">
+        <strong>Key Architecture Decision:</strong> The Vercel proxy is the linchpin of this design. Because the browser sends all API calls to <code>/api/pulsara/…</code> (same origin), Vercel's edge servers forward the request to Pulsara with full headers intact — completely bypassing browser CORS restrictions without any changes to Pulsara's server configuration.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 4. SEQUENCE DIAGRAM ══ -->
+  <div class="section" id="s4">
+    <div class="section-head"><div class="section-num">4</div><h2>Sequence Diagram — Submit Registration</h2></div>
+    <div class="section-body">
+      <div class="diagram">
+        <svg viewBox="0 0 860 580" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI',sans-serif" font-size="11">
+
+          <!-- Lifeline headers -->
+          <rect x="20" y="15" width="110" height="36" rx="7" fill="#007b75"/>
+          <text x="75" y="38" text-anchor="middle" fill="#fff" font-weight="700" font-size="11">Browser</text>
+
+          <rect x="200" y="15" width="110" height="36" rx="7" fill="#007b75"/>
+          <text x="255" y="38" text-anchor="middle" fill="#fff" font-weight="700" font-size="11">Vercel Proxy</text>
+
+          <rect x="390" y="15" width="130" height="36" rx="7" fill="#5b3f9a"/>
+          <text x="455" y="29" text-anchor="middle" fill="#fff" font-weight="700" font-size="11">Pulsara</text>
+          <text x="455" y="45" text-anchor="middle" fill="#c9b0f0" font-size="9">OAuth + API</text>
+
+          <rect x="600" y="15" width="120" height="36" rx="7" fill="#2e7d32"/>
+          <text x="660" y="29" text-anchor="middle" fill="#fff" font-weight="700" font-size="11">Pulsara</text>
+          <text x="660" y="45" text-anchor="middle" fill="#a5d6a7" font-size="9">Attachment Store</text>
+
+          <rect x="760" y="15" width="80" height="36" rx="7" fill="#5a3a00"/>
+          <text x="800" y="38" text-anchor="middle" fill="#ffd080" font-weight="700" font-size="11">Admin Log</text>
+
+          <!-- Lifelines -->
+          <line x1="75" y1="51" x2="75" y2="570" stroke="#00b5ad" stroke-width="1.5" stroke-dasharray="5,4"/>
+          <line x1="255" y1="51" x2="255" y2="570" stroke="#4a90a4" stroke-width="1.5" stroke-dasharray="5,4"/>
+          <line x1="455" y1="51" x2="455" y2="570" stroke="#9c6fd6" stroke-width="1.5" stroke-dasharray="5,4"/>
+          <line x1="660" y1="51" x2="660" y2="570" stroke="#66bb6a" stroke-width="1.5" stroke-dasharray="5,4"/>
+          <line x1="800" y1="51" x2="800" y2="570" stroke="#ffd080" stroke-width="1.5" stroke-dasharray="5,4"/>
+
+          <!-- PHASE 1: Auth -->
+          <rect x="10" y="63" width="840" height="18" rx="4" fill="rgba(0,181,173,.08)"/>
+          <text x="430" y="76" text-anchor="middle" fill="#7ececa" font-size="10" font-weight="700">PHASE 1 — Admin Login (one-time per session)</text>
+
+          <line x1="75" y1="90" x2="255" y2="90" stroke="#00b5ad" stroke-width="1.5" marker-end="url(#a1)"/>
+          <text x="165" y="85" text-anchor="middle" fill="#7ececa" font-size="9">POST /api/pulsara/api/v2/oauth2/token</text>
+          <line x1="255" y1="100" x2="455" y2="100" stroke="#9c6fd6" stroke-width="1.5" marker-end="url(#a2)"/>
+          <text x="355" y="95" text-anchor="middle" fill="#c9b0f0" font-size="9">forwarded → Pulsara OAuth</text>
+          <line x1="455" y1="115" x2="255" y2="115" stroke="#9c6fd6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a3)"/>
+          <text x="355" y="110" text-anchor="middle" fill="#c9b0f0" font-size="9">200 OK { id_token }</text>
+          <line x1="255" y1="125" x2="75" y2="125" stroke="#00b5ad" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a4)"/>
+          <text x="165" y="120" text-anchor="middle" fill="#7ececa" font-size="9">id_token stored in memory</text>
+          <line x1="75" y1="135" x2="800" y2="135" stroke="#ffd080" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#a5)"/>
+          <text x="437" y="130" text-anchor="middle" fill="#ffd080" font-size="9">✓ Login successful</text>
+
+          <!-- PHASE 2: Submit -->
+          <rect x="10" y="147" width="840" height="18" rx="4" fill="rgba(0,181,173,.08)"/>
+          <text x="430" y="160" text-anchor="middle" fill="#7ececa" font-size="10" font-weight="700">PHASE 2 — Form Submission (Registration)</text>
+
+          <!-- Validate -->
+          <rect x="30" y="170" width="90" height="22" rx="5" fill="#00b5ad" opacity=".3"/>
+          <text x="75" y="185" text-anchor="middle" fill="#7ececa" font-size="9">validate() fields</text>
+
+          <!-- Create channel -->
+          <line x1="75" y1="202" x2="255" y2="202" stroke="#00b5ad" stroke-width="1.5" marker-end="url(#a1)"/>
+          <text x="165" y="197" text-anchor="middle" fill="#7ececa" font-size="9">POST /api/pulsara/api/v1/patient-channels</text>
+          <text x="165" y="209" text-anchor="middle" fill="#5ab8b3" font-size="8">{ name, chief_complaint, dob/age, gender, add_collaborations }</text>
+          <line x1="255" y1="218" x2="455" y2="218" stroke="#9c6fd6" stroke-width="1.5" marker-end="url(#a2)"/>
+          <line x1="455" y1="232" x2="255" y2="232" stroke="#9c6fd6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a3)"/>
+          <text x="355" y="228" text-anchor="middle" fill="#c9b0f0" font-size="9">200 { id: patientId }</text>
+          <line x1="255" y1="242" x2="75" y2="242" stroke="#00b5ad" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a4)"/>
+          <line x1="75" y1="252" x2="800" y2="252" stroke="#ffd080" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#a5)"/>
+          <text x="437" y="247" text-anchor="middle" fill="#ffd080" font-size="9">[CREATE SUCCESS] Patient ID: {id}</text>
+
+          <!-- Wristband -->
+          <rect x="10" y="262" width="840" height="16" rx="3" fill="rgba(255,193,7,.06)"/>
+          <text x="430" y="274" text-anchor="middle" fill="#ffd080" font-size="9" font-style="italic">If wristband ID was scanned/entered:</text>
+          <line x1="75" y1="284" x2="255" y2="284" stroke="#00b5ad" stroke-width="1.5" marker-end="url(#a1)"/>
+          <text x="165" y="279" text-anchor="middle" fill="#7ececa" font-size="9">POST …/patient-channels/{id}/identifiers</text>
+          <line x1="255" y1="293" x2="455" y2="293" stroke="#9c6fd6" stroke-width="1.5" marker-end="url(#a2)"/>
+          <line x1="455" y1="304" x2="255" y2="304" stroke="#9c6fd6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a3)"/>
+          <line x1="255" y1="313" x2="75" y2="313" stroke="#00b5ad" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a4)"/>
+          <text x="165" y="322" text-anchor="middle" fill="#7ececa" font-size="9">200 identifier created</text>
+
+          <!-- Images -->
+          <rect x="10" y="330" width="840" height="16" rx="3" fill="rgba(102,187,106,.06)"/>
+          <text x="430" y="342" text-anchor="middle" fill="#a5d6a7" font-size="9" font-style="italic">For each captured image (loop):</text>
+          <line x1="75" y1="352" x2="255" y2="352" stroke="#00b5ad" stroke-width="1.5" marker-end="url(#a1)"/>
+          <text x="165" y="347" text-anchor="middle" fill="#7ececa" font-size="9">POST /api/pulsara/api/v2/attachments (FormData)</text>
+          <text x="165" y="359" text-anchor="middle" fill="#5ab8b3" font-size="8">{ owner_id, owner_type=3, file, suppress_alerts }</text>
+          <line x1="255" y1="368" x2="455" y2="368" stroke="#9c6fd6" stroke-width="1.5" marker-end="url(#a2)"/>
+          <line x1="455" y1="380" x2="660" y2="380" stroke="#66bb6a" stroke-width="1.5" marker-end="url(#a6)"/>
+          <text x="557" y="375" text-anchor="middle" fill="#a5d6a7" font-size="9">store image file</text>
+          <line x1="660" y1="392" x2="455" y2="392" stroke="#66bb6a" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a2)"/>
+          <line x1="455" y1="403" x2="255" y2="403" stroke="#9c6fd6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a3)"/>
+          <line x1="255" y1="413" x2="75" y2="413" stroke="#00b5ad" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a4)"/>
+          <line x1="75" y1="423" x2="800" y2="423" stroke="#ffd080" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#a5)"/>
+          <text x="437" y="418" text-anchor="middle" fill="#ffd080" font-size="9">[ATTACH SUCCESS] img 1/{n}</text>
+
+          <!-- Complete -->
+          <rect x="10" y="435" width="840" height="18" rx="4" fill="rgba(0,181,173,.08)"/>
+          <text x="430" y="448" text-anchor="middle" fill="#7ececa" font-size="10" font-weight="700">PHASE 3 — Completion</text>
+          <rect x="30" y="457" width="90" height="22" rx="5" fill="#2e7d32" opacity=".5"/>
+          <text x="75" y="472" text-anchor="middle" fill="#a5d6a7" font-size="9">Toast: success</text>
+          <line x1="75" y1="489" x2="800" y2="489" stroke="#ffd080" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#a5)"/>
+          <text x="437" y="484" text-anchor="middle" fill="#ffd080" font-size="9">[SUBMIT COMPLETE] Patient ID: {id}</text>
+
+          <!-- Arrow defs -->
+          <defs>
+            <marker id="a1" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#00b5ad"/></marker>
+            <marker id="a2" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#9c6fd6"/></marker>
+            <marker id="a3" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#9c6fd6"/></marker>
+            <marker id="a4" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#00b5ad"/></marker>
+            <marker id="a5" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#ffd080"/></marker>
+            <marker id="a6" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#66bb6a"/></marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 5. FIELD MAPPING ══ -->
+  <div class="section" id="s5">
+    <div class="section-head"><div class="section-num">5</div><h2>Complete Field Mapping</h2></div>
+    <div class="section-body">
+      <h3>Registration Form Fields → Pulsara API</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>UI Field</th>
+              <th>HTML ID</th>
+              <th>Required</th>
+              <th>Pulsara API Field</th>
+              <th>API Endpoint</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Pulsara Incident ID</td>
+              <td><code>incidentId</code></td>
+              <td><span class="badge badge-req">Required</span></td>
+              <td><code>add_collaborations[0].collaboration_id</code></td>
+              <td>POST /api/v1/patient-channels</td>
+              <td>Integer. Links patient to the active incident in Pulsara. Pre-filled via URL param <code>?incident=</code></td>
+            </tr>
+            <tr>
+              <td>Registration Timestamp</td>
+              <td><code>createdAt</code> (hidden)</td>
+              <td><span class="badge badge-auto">Auto</span></td>
+              <td>— (not sent)</td>
+              <td>—</td>
+              <td>ISO 8601. Displayed to staff for record-keeping. Pulsara assigns its own <code>created_at</code>.</td>
+            </tr>
+            <tr>
+              <td>Wristband ID</td>
+              <td><code>wristbandId</code></td>
+              <td><span class="badge badge-opt">Optional</span></td>
+              <td><code>identifiers[].value</code> with <code>type.id = WRISTBAND_IDENTIFIER_TYPE_ID</code></td>
+              <td>POST /api/v1/patient-channels/{id}/identifiers</td>
+              <td>Separate API call after channel creation. Requires <code>WRISTBAND_IDENTIFIER_TYPE_ID</code> const to be set. Enables "Scan to Find" in Pulsara mobile.</td>
+            </tr>
+            <tr>
+              <td>Registration Type</td>
+              <td><code>regType</code> (radio)</td>
+              <td><span class="badge badge-req">Required</span></td>
+              <td>Prepended to <code>chief_complaint</code></td>
+              <td>POST /api/v1/patient-channels</td>
+              <td>Values: Person, Pet, Belonging. Formatted as <code>[Person] narrative text</code>.</td>
+            </tr>
+            <tr>
+              <td>Associate Person ID</td>
+              <td><code>assocPersonId</code></td>
+              <td><span class="badge badge-opt">Optional</span></td>
+              <td>Appended to <code>chief_complaint</code></td>
+              <td>POST /api/v1/patient-channels</td>
+              <td>Only shown/sent when type is Pet or Belonging. Appended as <code>AssocPersonID: {value}</code>. Can be scanned via barcode.</td>
+            </tr>
+            <tr>
+              <td>First Name</td>
+              <td><code>firstName</code></td>
+              <td><span class="badge badge-req">Required</span></td>
+              <td><code>name.first</code></td>
+              <td>POST /api/v1/patient-channels</td>
+              <td>Max 20 characters (Pulsara limit).</td>
+            </tr>
+            <tr>
+              <td>Last Name</td>
+              <td><code>lastName</code></td>
+              <td><span class="badge badge-req">Required</span></td>
+              <td><code>name.last</code></td>
+              <td>POST /api/v1/patient-channels</td>
+              <td>Max 20 characters (Pulsara limit).</td>
+            </tr>
+            <tr>
+              <td>Date of Birth</td>
+              <td><code>dob</code></td>
+              <td><span class="badge badge-opt">Optional</span></td>
+              <td><code>dob.day</code> / <code>dob.month</code> / <code>dob.year</code></td>
+              <td>POST /api/v1/patient-channels</td>
+              <td>Mutually exclusive with Age. When present, age field is auto-calculated and disabled. Pulsara expects day/month/year as separate integers.</td>
+            </tr>
+            <tr>
+              <td>Age (years)</td>
+              <td><code>age</code></td>
+              <td><span class="badge badge-opt">Optional</span></td>
+              <td><code>age_in_units.age</code> + <code>age_in_units.units = 1</code></td>
+              <td>POST /api/v1/patient-channels</td>
+              <td>Only sent when DOB is absent. <code>units = 1</code> = YEARS (Pulsara integer constant).</td>
+            </tr>
+            <tr>
+              <td>Phone</td>
+              <td><code>phone</code></td>
+              <td><span class="badge badge-opt">Optional</span></td>
+              <td>Appended to <code>chief_complaint</code></td>
+              <td>POST /api/v1/patient-channels</td>
+              <td>Formatted as <code>Ph: {value}</code>. No dedicated phone field in Pulsara patient channel create endpoint.</td>
+            </tr>
+            <tr>
+              <td>Gender</td>
+              <td><code>gender</code> (radio)</td>
+              <td><span class="badge badge-opt">Optional</span></td>
+              <td><code>gender</code></td>
+              <td>POST /api/v1/patient-channels</td>
+              <td>Values: <code>male</code>, <code>female</code>, <code>other</code>.</td>
+            </tr>
+            <tr>
+              <td>Street / City / State / ZIP</td>
+              <td><code>address</code>, <code>city</code>, <code>state</code>, <code>zip</code></td>
+              <td><span class="badge badge-opt">Optional</span></td>
+              <td>Appended to <code>chief_complaint</code></td>
+              <td>POST /api/v1/patient-channels</td>
+              <td>Joined as a single address string. No dedicated address field in the create endpoint.</td>
+            </tr>
+            <tr>
+              <td>Narrative / Notes</td>
+              <td><code>cc</code></td>
+              <td><span class="badge badge-req">Required</span></td>
+              <td><code>chief_complaint</code></td>
+              <td>POST /api/v1/patient-channels</td>
+              <td>Max 255 characters (enforced by textarea <code>maxlength</code>). Auto-appended fields may push this close to the limit.</td>
+            </tr>
+            <tr>
+              <td>Photos</td>
+              <td><code>allImgs[]</code> (JS array)</td>
+              <td><span class="badge badge-opt">Optional</span></td>
+              <td><code>file</code> (FormData multipart)</td>
+              <td>POST /api/v2/attachments</td>
+              <td><code>owner_id = patientId</code>, <code>owner_type = 3</code> (PATIENT). First image: <code>suppress_alerts=false</code>. Subsequent: <code>suppress_alerts=true</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Chief Complaint Assembly (at submit)</h3>
+      <p>The <code>chief_complaint</code> field is assembled dynamically from multiple UI fields. The final string is truncated to 255 characters:</p>
+      <pre>[{RegType}] {NarrativeText} [Ph: {phone} | {address, city, state, zip} | AssocPersonID: {id}]</pre>
+      <p>Example — Pet registration:</p>
+      <pre>[Pet] Black lab, brown collar, friendly [Ph: 555-123-4567 | 100 Oak St, Denver, CO, 80201 | AssocPersonID: 98234]</pre>
+
+      <h3>Hardcoded API Constants</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Constant</th><th>Value</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code>MOA_ED_PATIENT</code></td><td><code>5</code></td><td>Method of Arrival = Community/ED Patient (Pulsara enum)</td></tr>
+            <tr><td><code>AGE_UNITS_YEARS</code></td><td><code>1</code></td><td>Age units integer for YEARS (Pulsara enum)</td></tr>
+            <tr><td><code>OWNER_TYPE_PATIENT</code></td><td><code>3</code></td><td>owner_type for attachment API = PATIENT</td></tr>
+            <tr><td><code>WRISTBAND_IDENTIFIER_TYPE_ID</code></td><td><code>null</code> (configure)</td><td>Must be set to the entity's PATIENT_WRISTBAND_NUMBER identifier type ID from Pulsara admin</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 6. FIELD LOGIC ══ -->
+  <div class="section" id="s6">
+    <div class="section-head"><div class="section-num">6</div><h2>Field Logic &amp; Conditional Behavior</h2></div>
+    <div class="section-body">
+
+      <h3>DOB ↔ Age Mutual Exclusivity</h3>
+      <ul>
+        <li>When a <strong>Date of Birth</strong> is entered, age is calculated automatically and the Age field is <strong>disabled + dimmed</strong>.</li>
+        <li>DOB is preferred — it maps to Pulsara's <code>dob</code> object. Age only maps to <code>age_in_units</code> when DOB is absent.</li>
+        <li>Clearing the DOB re-enables the Age field.</li>
+      </ul>
+
+      <h3>Registration Type → Conditional Fields</h3>
+      <ul>
+        <li><strong>Person</strong> (default): Associate Person ID field is hidden and cleared.</li>
+        <li><strong>Pet or Belonging</strong>: Associate Person ID field slides into view directly below the radio buttons. Its value is appended to <code>chief_complaint</code> on submit.</li>
+        <li>Switching back to Person hides and clears the field.</li>
+      </ul>
+
+      <h3>Barcode Scanner Routing</h3>
+      <ul>
+        <li>Two scan entry points share one camera modal: <strong>Wristband ID</strong> (Section 2) and <strong>Associate Person ID</strong> (Section 3).</li>
+        <li>An <code>assocScanMode</code> boolean flag determines which field receives the decoded value.</li>
+        <li>The flag is set when the Associate scan button is pressed and cleared only inside <code>applyScannedValue()</code> after routing — not on cancel — to prevent race conditions with the async ZXing decode callback.</li>
+        <li>Cancelling the scanner resets the flag explicitly via the Cancel button's <code>onclick</code>.</li>
+      </ul>
+
+      <h3>Narrative Preview (Live)</h3>
+      <ul>
+        <li>A read-only preview panel appears at the bottom of the Narrative card showing exactly which fields will be auto-appended to <code>chief_complaint</code>.</li>
+        <li>Updates in real time via <code>oninput</code> on: phone, address, city, state, zip, reg type radio, and assoc person ID.</li>
+        <li>Rows shown: 🏷️ Registration Type, 📞 Phone, 📍 Address, 🔗 Associate Person ID (only when applicable).</li>
+        <li>Panel hides automatically when all appended fields are empty.</li>
+      </ul>
+
+      <h3>QR Code / URL Token</h3>
+      <ul>
+        <li>The QR code encodes a URL with two query params: <code>?incident={id}&amp;ref={base64(id_token)}</code>.</li>
+        <li>On page load, if <code>?ref</code> is present in the URL, the token is extracted and the <strong>Admin tab is hidden</strong> (field staff see only the registration form).</li>
+        <li>If <code>?cp</code> is present, the Collection Point label is appended to the info banner.</li>
+        <li>The QR token is treated as a session credential — the UI warns it expires on logout.</li>
+      </ul>
+
+      <h3>Validation Rules</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Field</th><th>Rule</th><th>Behavior on Fail</th></tr></thead>
+          <tbody>
+            <tr><td>Incident ID</td><td>Must not be empty</td><td>Field shakes + red border + toast error</td></tr>
+            <tr><td>First Name</td><td>Must not be empty</td><td>Field shakes + red border + toast error</td></tr>
+            <tr><td>Last Name</td><td>Must not be empty</td><td>Field shakes + red border + toast error</td></tr>
+            <tr><td>Narrative / Notes</td><td>Must not be empty</td><td>Field shakes + red border + toast error</td></tr>
+            <tr><td>Auth Token</td><td>Must be present in memory</td><td>Toast: "Not logged in" — blocks submission</td></tr>
+            <tr><td>Associate Person ID</td><td>Optional; no validation</td><td>Simply omitted from chief_complaint if empty</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Image Upload Logic</h3>
+      <ul>
+        <li>Images accumulate in the <code>allImgs[]</code> JS array during the session.</li>
+        <li>First image is uploaded with <code>suppress_alerts=false</code> (triggers one Pulsara notification).</li>
+        <li>All subsequent images use <code>suppress_alerts=true</code> to avoid notification flooding.</li>
+        <li>Each upload failure is logged and skipped — the submission does not abort on image failure.</li>
+      </ul>
+
+      <h3>Language / RTL</h3>
+      <ul>
+        <li>Language selector applies translations to all visible UI strings immediately via <code>applyLanguage()</code>.</li>
+        <li>Arabic (<code>ar</code>) triggers <code>direction: rtl</code> on the registration tab container.</li>
+        <li>Validation error strings are also translated and pulled from the <code>T[lang]</code> object.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══ 7. OPEN SOURCE ══ -->
+  <div class="section" id="s7">
+    <div class="section-head"><div class="section-num">7</div><h2>Third-Party &amp; Open Source Components</h2></div>
+    <div class="section-body">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Component</th><th>Version</th><th>License</th><th>How Used</th><th>Source</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>@zxing/library</strong></td>
+              <td>0.19.2</td>
+              <td>Apache 2.0</td>
+              <td>In-browser 1D barcode decoding from live camera stream. Loaded via ESM <code>import</code> from esm.sh CDN. Supports CODE-128, CODE-39, CODE-93, CODABAR.</td>
+              <td><a href="https://github.com/zxing-js/library" style="color:var(--teal)">github.com/zxing-js/library</a></td>
+            </tr>
+            <tr>
+              <td><strong>esm.sh</strong></td>
+              <td>(CDN)</td>
+              <td>MIT</td>
+              <td>ESM module CDN used to load ZXing without a build step. Converts npm packages to ES module URLs compatible with <code>&lt;script type="module"&gt;</code>.</td>
+              <td><a href="https://esm.sh" style="color:var(--teal)">esm.sh</a></td>
+            </tr>
+            <tr>
+              <td><strong>api.qrserver.com</strong></td>
+              <td>(REST API)</td>
+              <td>Free tier (goQR.me)</td>
+              <td>Generates QR code PNG images server-side. Called with the encoded registration URL. Image rendered onto a <code>&lt;canvas&gt;</code> element for download/print.</td>
+              <td><a href="https://goqr.me/api/" style="color:var(--teal)">goqr.me/api</a></td>
+            </tr>
+            <tr>
+              <td><strong>Vercel</strong></td>
+              <td>(Platform)</td>
+              <td>Commercial (free tier)</td>
+              <td>Static hosting + server-side proxy rewrites. Eliminates CORS by forwarding <code>/api/pulsara/*</code> to Pulsara's API. Auto-deploys from GitHub on push.</td>
+              <td><a href="https://vercel.com" style="color:var(--teal)">vercel.com</a></td>
+            </tr>
+            <tr>
+              <td><strong>GitHub</strong></td>
+              <td>(Platform)</td>
+              <td>Commercial (free tier)</td>
+              <td>Source control and CI/CD trigger. Push to <code>main</code> → Vercel auto-deploy webhook.</td>
+              <td><a href="https://github.com" style="color:var(--teal)">github.com</a></td>
+            </tr>
+            <tr>
+              <td><strong>WebRTC / MediaDevices API</strong></td>
+              <td>(Browser native)</td>
+              <td>W3C Standard</td>
+              <td>Camera access for photo capture and barcode scanning. Uses <code>navigator.mediaDevices.getUserMedia()</code>. No library required.</td>
+              <td>Browser built-in</td>
+            </tr>
+            <tr>
+              <td><strong>File API / Canvas API</strong></td>
+              <td>(Browser native)</td>
+              <td>W3C Standard</td>
+              <td>Photo capture from video frame (<code>canvas.toBlob()</code>), thumbnail preview (<code>URL.createObjectURL()</code>), QR PNG download (<code>canvas.toDataURL()</code>).</td>
+              <td>Browser built-in</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">⚠️ <strong>QR Dependency Note:</strong> api.qrserver.com is a free external service. For production use, consider self-hosting a QR library (e.g. <code>qrcode</code> npm package compiled to a single JS file) to avoid external dependency and potential downtime.</div>
+    </div>
+  </div>
+
+  <!-- ══ 8. SECURITY ══ -->
+  <div class="section" id="s8">
+    <div class="section-head"><div class="section-num">8</div><h2>Security Considerations</h2></div>
+    <div class="section-body">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concern</th><th>Current Approach</th><th>Recommendation</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>API Authentication</td>
+              <td>OAuth 2.0 password grant → Bearer token stored in JS memory variable (<code>id_token</code>)</td>
+              <td>Token is session-scoped; no localStorage. Acceptable for prototype. For production, consider short-lived tokens or server-side session.</td>
+            </tr>
+            <tr>
+              <td>QR Token Exposure</td>
+              <td>Bearer token is base64-encoded in the QR URL (<code>?ref=…</code>)</td>
+              <td>QR sheet should be treated as a password. Tokens expire on logout. Rotate QRs per shift.</td>
+            </tr>
+            <tr>
+              <td>CORS / API Proxy</td>
+              <td>Vercel server-side rewrite — browser never sees cross-origin response</td>
+              <td>Vercel proxy does not add authentication — the Bearer token is passed through as-is. Keep Vercel project private or add Vercel access controls.</td>
+            </tr>
+            <tr>
+              <td>PHI in Transit</td>
+              <td>All calls over HTTPS (Vercel enforces TLS; Pulsara enforces TLS)</td>
+              <td>Ensure Vercel project is HTTPS-only (default). Do not use HTTP URLs.</td>
+            </tr>
+            <tr>
+              <td>PHI at Rest (Browser)</td>
+              <td>No data persisted — no localStorage, no cookies, no IndexedDB</td>
+              <td>Already correct. Data lives only in DOM inputs and JS variables for the duration of the session.</td>
+            </tr>
+            <tr>
+              <td>Credential Handling</td>
+              <td>Username/password entered in Admin tab, used once for token fetch, not stored</td>
+              <td>For shared devices, recommend logging out after each admin session. Consider auto-logout on inactivity.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 9. KNOWN LIMITATIONS ══ -->
+  <div class="section" id="s9">
+    <div class="section-head"><div class="section-num">9</div><h2>Known Limitations &amp; Configuration TODOs</h2></div>
+    <div class="section-body">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Item</th><th>Detail</th><th>Action Required</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Wristband Identifier Type ID</td>
+              <td><code>WRISTBAND_IDENTIFIER_TYPE_ID</code> is <code>null</code> in the current code. Wristband post is skipped with a warning log.</td>
+              <td>Obtain the <code>PATIENT_WRISTBAND_NUMBER</code> identifier type ID from your Pulsara administrator and set the constant in <code>index.html</code>.</td>
+            </tr>
+            <tr>
+              <td>Chief Complaint 255-char limit</td>
+              <td>All auto-appended fields (phone, address, type, assocID) share the 255-char limit with the narrative text. Long addresses + long narratives may truncate.</td>
+              <td>Consider a character counter that accounts for appended text. Future: use Pulsara's <code>contacts</code> field for phone if available.</td>
+            </tr>
+            <tr>
+              <td>Vercel <code>destination</code> URL</td>
+              <td>Currently points to <code>us-internal-demo.pulsara.com</code>. Production requires a separate <code>vercel.json</code> or environment-based rewrite.</td>
+              <td>Update <code>vercel.json</code> <code>destination</code> before going live. Consider Vercel environment variables to switch per environment.</td>
+            </tr>
+            <tr>
+              <td>Single-tab Admin access</td>
+              <td>The Admin tab is hidden when the page is loaded via a QR <code>?ref=</code> URL. Field staff cannot re-login if the token expires mid-shift.</td>
+              <td>Implement token expiry detection and redirect to a login page, or include a hidden "admin unlock" gesture.</td>
+            </tr>
+            <tr>
+              <td>No offline support</td>
+              <td>The app requires an active internet connection for all submissions. No Service Worker or local queue.</td>
+              <td>For disaster use cases with unreliable connectivity, consider a local queue (IndexedDB) with background sync.</td>
+            </tr>
+            <tr>
+              <td>Image file size</td>
+              <td>No client-side image compression. Large photos from high-res cameras may be slow to upload or rejected by Pulsara.</td>
+              <td>Add canvas-based JPEG compression before upload (target &lt; 1 MB per image).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 10. FUTURE ENHANCEMENTS ══ -->
+  <div class="section" id="s10">
+    <div class="section-head"><div class="section-num">10</div><h2>Future Enhancement Ideas</h2></div>
+    <div class="section-body">
+      <div class="g2">
+        <div class="card-sm">
+          <h4>🔄 Offline Queue</h4>
+          <p>Cache registrations in IndexedDB when offline; background-sync to Pulsara when connectivity is restored. Critical for disaster scenarios with intermittent connectivity.</p>
+        </div>
+        <div class="card-sm">
+          <h4>🔍 Patient Lookup</h4>
+          <p>Add a "Find Existing" mode that searches Pulsara by wristband scan or name before creating a new channel — prevents duplicate records.</p>
+        </div>
+        <div class="card-sm">
+          <h4>🖨️ Wristband Print</h4>
+          <p>After successful registration, generate a printable wristband label (via window.print CSS) showing name, patient ID, and a barcode.</p>
+        </div>
+        <div class="card-sm">
+          <h4>📊 Dashboard View</h4>
+          <p>A read-only dashboard tab showing recent registrations from the current incident (using GET /api/v1/patient-channels with collaboration filter).</p>
+        </div>
+        <div class="card-sm">
+          <h4>🔐 Scoped QR Tokens</h4>
+          <p>Generate short-lived, scoped tokens server-side (e.g. via a Vercel serverless function) rather than embedding the full Bearer token in the QR URL.</p>
+        </div>
+        <div class="card-sm">
+          <h4>🗜️ Image Compression</h4>
+          <p>Client-side JPEG compression via Canvas API before upload. Target ~800 KB per image to ensure fast uploads in low-bandwidth disaster environments.</p>
+        </div>
+        <div class="card-sm">
+          <h4>🌐 Additional Languages</h4>
+          <p>Expand beyond current 10 languages. High-priority additions for US disaster contexts: Somali (SO), Amharic (AM), Hmong (HMN), Portuguese (PT).</p>
+        </div>
+        <div class="card-sm">
+          <h4>♿ Accessibility (a11y)</h4>
+          <p>Add ARIA labels, focus management, and keyboard navigation to fully support screen readers and assistive technology for staff with disabilities.</p>
+        </div>
+        <div class="card-sm">
+          <h4>🪪 Driver's License Scan (PDF417)</h4>
+          <p>Add PDF417 2D barcode decoding to auto-populate First Name, Last Name, DOB, and Address directly from a scanned driver's license. ZXing supports PDF417; requires adding the format to the hint map and updating the field-routing logic.</p>
+        </div>
+        <div class="card-sm">
+          <h4>🔤 Barcode Regex Validation</h4>
+          <p>Allow admins to define a simple regex pattern on the Admin tab (e.g. <code>^[A-Z]\d{9}$</code> to require one letter before digits, or <code>.{1,10}</code> to limit length). The scanner would reject non-matching values with a clear error before applying them to the field.</p>
+        </div>
+        <div class="card-sm">
+          <h4>🎤 Voice-to-Text Data Entry</h4>
+          <p>Add a microphone button to the Narrative field using the Web Speech API (<code>SpeechRecognition</code>). Supports multilingual dictation matching the selected UI language — especially valuable for high-volume, fast-paced registration environments.</p>
+        </div>
+        <div class="card-sm">
+          <h4>🧠 AI-Assisted Smart Entry</h4>
+          <p>A single free-text or voice input box (inspired by Pulsara Intelligence) that uses an LLM to parse natural language in any language and auto-populate structured form fields — name, DOB, address, narrative, and registration type. Dramatically reduces time-to-submit for multilingual, non-technical registrants.</p>
+        </div>
+        <div class="card-sm">
+          <h4>🔍 Missing Person Form Mode</h4>
+          <p>A configurable Admin toggle that switches the form into a <strong>"Missing Person Report"</strong> mode — allowing a community member to submit details about a loved one they cannot locate. Fields shift to describe the missing person (last known location, physical description, contact info for the reporter). Submitted records are tagged and cross-referenced against registered persons in the incident. The mode toggle lives in the Admin tab as a per-session property.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+</body>
+</html>
