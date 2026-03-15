@@ -543,8 +543,8 @@ main{padding:16px 24px 40px;max-width:900px;margin:0 auto;}
            shouldShowBelonging, calcAgeFromDob } from './utils.js';
 
   // ... rest of your existing script
-</script>
-  <script>
+<script type="module">
+<script>
 function renderQR(text,canvasEl){const sz=180;const url=`https://api.qrserver.com/v1/create-qr-code/?size=${sz}x${sz}&data=${encodeURIComponent(text)}&format=png&margin=10&ecc=M`;const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{const c=canvasEl.getContext('2d');c.clearRect(0,0,sz,sz);c.drawImage(img,0,0,sz,sz);};img.onerror=()=>{const c=canvasEl.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,sz,sz);c.fillStyle='#e53935';c.font='bold 13px Arial';c.textAlign='center';c.fillText('⚠ QR unavailable',sz/2,sz/2-8);};img.src=url;}
 </script>
 
