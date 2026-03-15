@@ -1,0 +1,18 @@
+{
+  "name": "community-registration",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:ui": "playwright test",
+    "test:ui:headed": "playwright test --headed",
+    "test:all": "npm test && npm run test:ui"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "@playwright/test": "^1.44.0",
+    "serve": "^14.0.0"
+  }
+}
