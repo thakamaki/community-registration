@@ -1,0 +1,83 @@
+# .github/workflows/test.yml
+# Runs Layer 1 (Playwright UI) and Layer 2 (Vitest unit) on every push and pull request.
+# Layer 3 (live Pulsara E2E) is NOT included here — add later once firewall is open.
+
+name: Test Suite — Layers 1 & 2
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ── Layer 2: Vitest Unit Tests ────────────────────────────────
+  unit-tests:
+    name: Layer 2 · Unit Tests (Vitest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
+  # ── Layer 1: Playwright UI Tests ─────────────────────────────
+  ui-tests:
+    name: Layer 1 · UI Tests (Playwright)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local server
+        run: npx serve . -p 3000 &
+        # Serves index.html at http://localhost:3000
+        # The & runs it in the background so the next step can proceed
+
+      - name: Wait for server to be ready
+        run: npx wait-on http://localhost:3000 --timeout 15000
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        env:
+          BASE_URL: http://localhost:3000
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
