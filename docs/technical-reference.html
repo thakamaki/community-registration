@@ -98,14 +98,15 @@ td code{font-size:.78rem;}
     <a href="#s7">Open Source</a>
     <a href="#s8">Security</a>
     <a href="#s9">Known Limits</a>
-    <a href="#s10">Future</a>
+    <a href="#s10">Automated Testing</a>
+    <a href="#s11">Future</a>
   </div>
 </nav>
 
 <div class="page">
 
   <div class="hero">
-    <h1>🛡️ Community Registration Client</h1>
+    <h1>🛡️ Community Registration</h1>
     <p>Technical Reference · Powered by Pulsara · Disaster Assistance &amp; Collection Point Portal</p>
     <div class="hero-meta">
       <span class="hero-tag">Version 1.0</span>
@@ -180,6 +181,18 @@ td code{font-size:.78rem;}
             <tr><td>🌀 ETN / TDEM Workflows</td><td>Texas Department of Emergency Management using CRC for statewide disaster response coordination</td><td>Integration with state EOC systems, scalable incident management</td></tr>
             <tr><td>🔍 Missing Persons</td><td>Community members reporting a missing loved one; responders tracking unaccounted persons across shelters</td><td>Alternate form mode, family-submitted data, cross-reference with registered persons</td></tr>
             <tr><td>🏠 Assisted Living / FLDOH</td><td>Florida Department of Health and assisted living facilities tracking vulnerable residents during evacuation</td><td>Pre-populated resident lists, caregiver-assisted registration, medical context fields</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Form Modes</h3>
+      <p>The application supports two distinct form modes, selectable by the admin and baked into the QR code via <code>?mode=missing</code>:</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Mode</th><th>URL Param</th><th>Purpose</th><th>Visual Identity</th></tr></thead>
+          <tbody>
+            <tr><td>📋 <strong>Registration</strong> (default)</td><td><code>—</code></td><td>Standard disaster intake — Person, Pet, or Belonging</td><td>Teal theme</td></tr>
+            <tr><td>🔍 <strong>Missing Person</strong></td><td><code>?mode=missing</code></td><td>Public-facing report for community members searching for unlocated loved ones</td><td>Purple theme, dedicated fields, reporter section</td></tr>
           </tbody>
         </table>
       </div>
@@ -669,11 +682,31 @@ td code{font-size:.78rem;}
         </table>
       </div>
 
+      <h3>Missing Person Mode — Additional Fields</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>UI Field</th><th>HTML ID</th><th>Pulsara Mapping</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Last Known Location</td><td><code>lastKnownLocation</code></td><td>Appended to <code>chief_complaint</code> as <code>LastSeen: {value}</code></td><td>Free text, max 120 chars. Street, neighborhood, or landmark.</td></tr>
+            <tr><td>Physical Description</td><td><code>physicalDesc</code></td><td>Appended to <code>chief_complaint</code> as <code>Desc: {value}</code></td><td>Hair, clothing, height, distinguishing features. Max 120 chars.</td></tr>
+            <tr><td>Reporter First Name</td><td><code>reporterFirst</code></td><td>Appended to <code>chief_complaint</code> as <code>Reporter: {name} ({relation})</code></td><td>Optional. Person submitting the report.</td></tr>
+            <tr><td>Reporter Last Name</td><td><code>reporterLast</code></td><td>Combined with first name in reporter append</td><td>Optional.</td></tr>
+            <tr><td>Reporter Phone</td><td><code>reporterPhone</code></td><td>Appended as <code>ReporterPh: {value}</code></td><td>Optional. For responder follow-up.</td></tr>
+            <tr><td>Relationship to Missing Person</td><td><code>reporterRelation</code></td><td>Appended in parentheses after reporter name</td><td>Optional. e.g. "Parent", "Spouse".</td></tr>
+          </tbody>
+        </table>
+      </div>
+
       <h3>Chief Complaint Assembly (at submit)</h3>
-      <p>The <code>chief_complaint</code> field is assembled dynamically from multiple UI fields. The final string is truncated to 255 characters:</p>
-      <pre>[{RegType}] {NarrativeText} [Ph: {phone} | {address, city, state, zip} | AssocPersonID: {id}]</pre>
+      <p>The <code>chief_complaint</code> field is assembled dynamically. The final string is truncated to 255 characters.</p>
+      <p><strong>Standard Registration:</strong></p>
+      <pre>[{RegType}] {NarrativeText} [Ph: {phone} | {address} | AssocPersonID: {id}]</pre>
       <p>Example — Pet registration:</p>
-      <pre>[Pet] Black lab, brown collar, friendly [Ph: 555-123-4567 | 100 Oak St, Denver, CO, 80201 | AssocPersonID: 98234]</pre>
+      <pre>[Pet] Black lab, brown collar [Ph: 555-123-4567 | 100 Oak St, Denver, CO, 80201 | AssocPersonID: 98234]</pre>
+      <p><strong>Missing Person Report:</strong></p>
+      <pre>[Missing Person] {details} [Ph: {phone} | {last known address} | LastSeen: {location} | Desc: {physical} | Reporter: {name} ({relation}) | ReporterPh: {phone}]</pre>
+      <p>Example:</p>
+      <pre>[Missing Person] Male, approx 70, diabetic, last seen Tuesday morning [Ph: 555-9876 | 45 Elm St, Houston, TX | LastSeen: Near Minute Maid Park | Desc: Grey hair, blue jacket, walks with cane | Reporter: Maria Gonzalez (Daughter) | ReporterPh: 555-1234]</pre>
 
       <h3>Hardcoded API Constants</h3>
       <div class="tbl-wrap">
@@ -694,6 +727,29 @@ td code{font-size:.78rem;}
   <div class="section" id="s6">
     <div class="section-head"><div class="section-num">6</div><h2>Field Logic &amp; Conditional Behavior</h2></div>
     <div class="section-body">
+
+      <h3>Missing Person Mode Logic</h3>
+      <ul>
+        <li>Triggered by <code>?mode=missing</code> in the URL, set by the admin when generating the QR.</li>
+        <li>Wristband ID section is hidden — not relevant for community-submitted missing person reports.</li>
+        <li>Registration Type radio buttons are hidden; type is hardcoded to <code>Missing Person</code> in the chief complaint.</li>
+        <li>Demographics section relabeled to describe the missing person, not the submitter.</li>
+        <li>Address section relabeled "Last Known Address" with explanatory sub-label.</li>
+        <li>Two additional fields appear in Demographics: Last Known Location and Physical Description.</li>
+        <li>A purple-themed Reporter Information card appears before submit — all fields optional to avoid discouraging submissions.</li>
+        <li>Photo section is promoted with a strong-recommendation callout (photo of the missing person).</li>
+        <li>Header, banner, and submit button all reflect purple Missing Person branding.</li>
+        <li>Print sheet message changes to "Scan to report a missing loved one" and notes public distribution intent.</li>
+        <li>Admin checklist callout appears when Missing Person mode is selected, requiring a dedicated Pulsara mission before QR generation.</li>
+      </ul>
+
+      <h3>Admin Form Mode Selector</h3>
+      <ul>
+        <li>The Admin tab exposes a two-button "Form Mode" selector: <strong>Registration</strong> (default, teal) and <strong>Missing Person</strong> (purple).</li>
+        <li>Selecting Missing Person reveals the pre-requisite checklist callout.</li>
+        <li>The selected mode is appended to the QR URL as <code>&amp;mode=missing</code>.</li>
+        <li>The "Push to Registration Form" button also applies the selected mode to the current browser session.</li>
+      </ul>
 
       <h3>DOB ↔ Age Mutual Exclusivity</h3>
       <ul>
@@ -917,7 +973,238 @@ td code{font-size:.78rem;}
     </div>
   </div>
 
-  <!-- ══ 10. FUTURE ENHANCEMENTS ══ -->
+  <!-- ══ 10. AUTOMATED TESTING ══ -->
+  <div class="section" id="s10">
+    <div class="section-head"><div class="section-num">10</div><h2>Automated Testing</h2></div>
+    <div class="section-body">
+
+      <h3>Overview</h3>
+      <p>The Community Registration project uses a two-layer automated test suite that runs on every push to the <code>main</code> branch via GitHub Actions. Tests complete in under 90 seconds and immediately flag any broken behavior with a ✅ or ❌ next to each commit.</p>
+
+      <div class="g2">
+        <div class="card-sm">
+          <h4>🧪 Layer 2 — Unit Tests (Vitest)</h4>
+          <p>Tests pure JavaScript logic with no browser and no network. Runs in ~2 seconds. These test the <em>math and rules</em> of the app — field assembly, validation, visibility logic.</p>
+          <p style="margin-top:8px;font-size:.8rem;color:var(--muted);">File: <code>tests/unit/utils.test.js</code></p>
+        </div>
+        <div class="card-sm">
+          <h4>🌐 Layer 1 — UI Tests (Playwright)</h4>
+          <p>Tests a real browser loading the actual <code>index.html</code>. Runs in ~35 seconds. These test what a <em>staff member or registrant actually sees and experiences</em> — buttons, fields, form behavior.</p>
+          <p style="margin-top:8px;font-size:.8rem;color:var(--muted);">File: <code>tests/e2e/ui.spec.js</code></p>
+        </div>
+      </div>
+
+      <h3>Repo Structure</h3>
+      <pre>repo-root/
+├── utils.js                        ← Pure functions extracted for unit testing
+├── tests/
+│   ├── unit/
+│   │   └── utils.test.js           ← Layer 2: 51 Vitest unit tests
+│   └── e2e/
+│       └── ui.spec.js              ← Layer 1: 50 Playwright UI tests
+├── vitest.config.js                ← Vitest configuration
+├── playwright.config.js            ← Playwright configuration
+├── package.json                    ← Test dependencies
+└── .github/workflows/test.yml      ← GitHub Actions CI pipeline</pre>
+
+      <h3>How to Add a New Test — Guide for Non-Developers</h3>
+      <div class="callout">
+        <strong>When should I add a test?</strong> Any time you add a new field, change a business rule, or fix a bug — add a test that proves it works. Think of each test as a "permanent memory" that the app never forgets that rule.
+      </div>
+
+      <h4>Adding a Unit Test (for logic/rules)</h4>
+      <p>Unit tests live in <code>tests/unit/utils.test.js</code>. Each test follows the same simple pattern:</p>
+      <pre>it('describes what should happen in plain English', () => {
+  const result = functionToTest({ inputs });  // call the function
+  expect(result).toBe('expected output');     // assert what you expect
+});</pre>
+      <p>Example — adding a test for a new field appended to the chief complaint:</p>
+      <pre>it('appends shelter type when provided', () => {
+  const result = buildChiefComplaint({
+    narrative: 'Needs assistance',
+    shelterType: 'Red Cross Shelter A',
+  });
+  expect(result).toContain('Shelter: Red Cross Shelter A');
+});</pre>
+
+      <h4>Adding a UI Test (for browser behavior)</h4>
+      <p>UI tests live in <code>tests/e2e/ui.spec.js</code>. Each test opens a real browser, interacts with the form, and checks what it sees:</p>
+      <pre>test('new field appears when condition is met', async ({ page }) => {
+  await page.goto('/');                              // open the app
+  await page.check('input[value="SomeType"]');       // click something
+  await expect(page.locator('#newFieldId'))
+    .toBeVisible();                                  // assert what you see
+});</pre>
+      <p>Common Playwright actions you'll use:</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Action</th><th>Code</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>Open the app</td><td><code>await page.goto('/')</code></td><td>Loads index.html in the browser</td></tr>
+            <tr><td>Type in a field</td><td><code>await page.fill('#fieldId', 'value')</code></td><td>Types text into an input</td></tr>
+            <tr><td>Click a button</td><td><code>await page.click('button:has-text("Submit")')</code></td><td>Clicks a button by its label</td></tr>
+            <tr><td>Select a radio</td><td><code>await page.check('input[value="Pet"]')</code></td><td>Selects a radio button</td></tr>
+            <tr><td>Check visible</td><td><code>await expect(page.locator('#id')).toBeVisible()</code></td><td>Asserts element is on screen</td></tr>
+            <tr><td>Check hidden</td><td><code>await expect(page.locator('#id')).toBeHidden()</code></td><td>Asserts element is not shown</td></tr>
+            <tr><td>Check text</td><td><code>await expect(page.locator('#id')).toContainText('hello')</code></td><td>Asserts element contains text</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Layer 2 — Vitest Unit Tests (51 tests)</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Group</th><th>Test Name</th><th>What it verifies</th></tr></thead>
+          <tbody>
+            <tr><td rowspan="10" style="font-weight:700;color:var(--teal-d);">buildChiefComplaint<br/>Registration mode</td><td>wraps narrative in [Person] tag by default</td><td>Default reg type label is applied</td></tr>
+            <tr><td>appends phone when provided</td><td>Phone number appears in CC</td></tr>
+            <tr><td>appends full address when all parts provided</td><td>All address fields join correctly</td></tr>
+            <tr><td>omits address parts that are empty</td><td>No "undefined" or blank separators</td></tr>
+            <tr><td>appends AssocPersonID for Pet</td><td>Pet type triggers owner linkage</td></tr>
+            <tr><td>appends AssocPersonID for Belonging</td><td>Belonging type triggers owner linkage</td></tr>
+            <tr><td>does NOT append AssocPersonID for Person</td><td>Person type never gets assoc field</td></tr>
+            <tr><td>does NOT append AssocPersonID when empty</td><td>Empty assoc field is silently skipped</td></tr>
+            <tr><td>uses [Pet] and [Belonging] type labels</td><td>Type label reflects selection</td></tr>
+            <tr><td>truncates to 255 characters</td><td>Pulsara field limit enforced</td></tr>
+            <tr><td rowspan="7" style="font-weight:700;color:var(--missing-m);">buildChiefComplaint<br/>Missing Person mode</td><td>uses [Missing Person] type label</td><td>Mode produces correct type prefix</td></tr>
+            <tr><td>appends LastSeen when provided</td><td>Location field appears in CC</td></tr>
+            <tr><td>appends Desc when provided</td><td>Physical description appears in CC</td></tr>
+            <tr><td>appends Reporter name, relation, and phone</td><td>All reporter fields appear correctly</td></tr>
+            <tr><td>omits Reporter section when all empty</td><td>No empty Reporter label in CC</td></tr>
+            <tr><td>does NOT append AssocPersonID in missing mode</td><td>Assoc field suppressed in missing mode</td></tr>
+            <tr><td>omits relation parentheses when relation empty</td><td>No empty "()" in reporter string</td></tr>
+            <tr><td rowspan="9" style="font-weight:700;color:var(--teal-d);">buildPayload</td><td>includes name.first and name.last</td><td>Name mapped to correct Pulsara fields</td></tr>
+            <tr><td>truncates first/last name to 20 chars</td><td>Pulsara name field limit enforced</td></tr>
+            <tr><td>sets method_of_arrival to 5</td><td>Correct Pulsara MOA constant</td></tr>
+            <tr><td>adds collaboration when incidentId valid</td><td>Incident linkage is created</td></tr>
+            <tr><td>omits collaboration when incidentId empty</td><td>No broken collaboration object sent</td></tr>
+            <tr><td>sends dob object when DOB present</td><td>DOB mapped to day/month/year fields</td></tr>
+            <tr><td>sends age_in_units when age present, DOB absent</td><td>Age fallback uses correct units constant</td></tr>
+            <tr><td>DOB takes priority — does not send both</td><td>Mutual exclusivity enforced in payload</td></tr>
+            <tr><td>omits age_in_units for invalid values (0, 121, abc)</td><td>Bad age values silently ignored</td></tr>
+            <tr><td rowspan="8" style="font-weight:700;color:var(--teal-d);">validateFields</td><td>returns valid:true when all fields present</td><td>Happy path passes validation</td></tr>
+            <tr><td>fails when incidentId missing</td><td>Correct error field and key returned</td></tr>
+            <tr><td>fails when firstName missing</td><td>Correct error field returned</td></tr>
+            <tr><td>fails when lastName missing</td><td>Correct error field returned</td></tr>
+            <tr><td>fails when narrative missing</td><td>Correct error field returned</td></tr>
+            <tr><td>uses valCCMissing key in missing person mode</td><td>Missing mode uses translated error key</td></tr>
+            <tr><td>fails when idToken is null</td><td>Unauthenticated submit blocked</td></tr>
+            <tr><td>fails on whitespace-only fields</td><td>Blank spaces don't pass validation</td></tr>
+            <tr><td rowspan="4" style="font-weight:700;color:var(--teal-d);">shouldShowAssocPersonId</td><td>shows for Pet in registration mode</td><td>Pet triggers assoc field</td></tr>
+            <tr><td>shows for Belonging in registration mode</td><td>Belonging triggers assoc field</td></tr>
+            <tr><td>hides for Person</td><td>Person type hides assoc field</td></tr>
+            <tr><td>always hides in missing person mode</td><td>Missing mode suppresses assoc field for all types</td></tr>
+            <tr><td rowspan="2" style="font-weight:700;color:var(--teal-d);">shouldShowBelonging</td><td>shows Belonging in registration mode</td><td>Belonging option visible in standard mode</td></tr>
+            <tr><td>hides Belonging in missing person mode</td><td>Belonging option hidden in missing mode</td></tr>
+            <tr><td rowspan="5" style="font-weight:700;color:var(--teal-d);">calcAgeFromDob</td><td>calculates correct age</td><td>Age math is accurate</td></tr>
+            <tr><td>handles birthday not yet reached this year</td><td>Pre-birthday age is correct</td></tr>
+            <tr><td>handles birthday already passed this year</td><td>Post-birthday age is correct</td></tr>
+            <tr><td>returns null for empty string</td><td>No DOB returns null gracefully</td></tr>
+            <tr><td>returns null for future DOB</td><td>Future dates return null, not negative age</td></tr>
+            <tr><td rowspan="6" style="font-weight:700;color:var(--teal-d);">buildQrUrl</td><td>builds a basic registration URL</td><td>URL contains incident and ref params</td></tr>
+            <tr><td>appends mode=missing for missing person mode</td><td>Missing mode baked into QR URL</td></tr>
+            <tr><td>does NOT append mode param for registration mode</td><td>Clean URL for standard mode</td></tr>
+            <tr><td>appends cp label when provided</td><td>Collection point label URL-encoded</td></tr>
+            <tr><td>omits cp param when label empty</td><td>No empty cp= in URL</td></tr>
+            <tr><td>base64-encodes the token in ref param</td><td>Token correctly encoded for QR</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Layer 1 — Playwright UI Tests (50 tests)</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Group</th><th>Test Name</th><th>What it verifies</th></tr></thead>
+          <tbody>
+            <tr><td rowspan="4" style="font-weight:700;color:var(--teal-d);">Page load</td><td>shows Registration Form tab by default</td><td>Correct tab is active on load</td></tr>
+            <tr><td>timestamps are populated on load</td><td>Date/time auto-capture works</td></tr>
+            <tr><td>incident status shows helper text when empty</td><td>Empty state messaging correct</td></tr>
+            <tr><td>incident status shows checkmark when filled</td><td>Filled state confirmation correct</td></tr>
+            <tr><td rowspan="5" style="font-weight:700;color:var(--teal-d);">Form validation</td><td>shows error toast when Incident ID missing</td><td>Required field blocked at submit</td></tr>
+            <tr><td>shows error toast when First Name missing</td><td>Required field blocked at submit</td></tr>
+            <tr><td>shows error toast when Last Name missing</td><td>Required field blocked at submit</td></tr>
+            <tr><td>shows error toast when Narrative missing</td><td>Required field blocked at submit</td></tr>
+            <tr><td>missing field gets err class (shake animation)</td><td>Visual shake feedback fires correctly</td></tr>
+            <tr><td rowspan="2" style="font-weight:700;color:var(--teal-d);">DOB / Age</td><td>entering DOB auto-calculates age and disables age field</td><td>DOB priority and auto-calc works</td></tr>
+            <tr><td>clearing DOB re-enables age field</td><td>Mutual exclusivity resets correctly</td></tr>
+            <tr><td rowspan="5" style="font-weight:700;color:var(--teal-d);">Registration Type visibility</td><td>Associate Person ID hidden by default</td><td>Assoc field hidden for Person</td></tr>
+            <tr><td>Associate Person ID appears when Pet selected</td><td>Pet triggers assoc field in browser</td></tr>
+            <tr><td>Associate Person ID appears when Belonging selected</td><td>Belonging triggers assoc field in browser</td></tr>
+            <tr><td>Associate Person ID hides when switching back to Person</td><td>Field correctly hides on re-selection</td></tr>
+            <tr><td>Associate Person ID field clears when hidden</td><td>Stale value not retained when hidden</td></tr>
+            <tr><td rowspan="7" style="font-weight:700;color:var(--teal-d);">Narrative preview</td><td>panel hidden when no appended fields filled</td><td>Preview hidden in empty state</td></tr>
+            <tr><td>panel appears when phone entered</td><td>Phone triggers preview panel</td></tr>
+            <tr><td>panel shows address when city and state filled</td><td>Address rows appear in preview</td></tr>
+            <tr><td>shows Registration Type row</td><td>Type always shown in preview</td></tr>
+            <tr><td>shows Associate Person ID row when filled</td><td>Assoc ID row appears in preview</td></tr>
+            <tr><td>panel shows only reg type row after other fields cleared</td><td>Preview correctly reduces to one row</td></tr>
+            <tr><td>panel hides when no contributing fields active</td><td>Preview fully hides in empty state</td></tr>
+            <tr><td rowspan="4" style="font-weight:700;color:var(--teal-d);">Clear Form</td><td>clears all text fields</td><td>All inputs reset to empty</td></tr>
+            <tr><td>resets Registration Type to Person</td><td>Radio button returns to default</td></tr>
+            <tr><td>hides Associate Person ID row after clear</td><td>Conditional field hidden after reset</td></tr>
+            <tr><td>toast NOT shown when confirm cancelled</td><td>Cancelled clear does nothing</td></tr>
+            <tr><td rowspan="11" style="font-weight:700;color:var(--teal-d);">Language switching</td><td>switches to es without JS errors</td><td>Spanish loads cleanly</td></tr>
+            <tr><td>switches to zh without JS errors</td><td>Chinese loads cleanly</td></tr>
+            <tr><td>switches to tl without JS errors</td><td>Tagalog loads cleanly</td></tr>
+            <tr><td>switches to vi without JS errors</td><td>Vietnamese loads cleanly</td></tr>
+            <tr><td>switches to ar without JS errors</td><td>Arabic loads cleanly</td></tr>
+            <tr><td>switches to fr without JS errors</td><td>French loads cleanly</td></tr>
+            <tr><td>switches to ko without JS errors</td><td>Korean loads cleanly</td></tr>
+            <tr><td>switches to ru without JS errors</td><td>Russian loads cleanly</td></tr>
+            <tr><td>switches to ht without JS errors</td><td>Haitian Creole loads cleanly</td></tr>
+            <tr><td>Arabic applies RTL direction</td><td>Right-to-left layout applied for Arabic</td></tr>
+            <tr><td>switching back to English restores LTR</td><td>LTR correctly restored after RTL</td></tr>
+            <tr><td rowspan="10" style="font-weight:700;color:var(--missing-m);">Missing Person mode<br/>(URL param)</td><td>hides Wristband section</td><td>Section 2 fully hidden in missing mode</td></tr>
+            <tr><td>hides Belonging option</td><td>Belonging radio hidden in missing mode</td></tr>
+            <tr><td>shows Reporter Information card</td><td>Reporter section visible in missing mode</td></tr>
+            <tr><td>shows photo callout</td><td>Photo recommendation banner visible</td></tr>
+            <tr><td>shows Last Known Location field</td><td>Missing-specific field visible</td></tr>
+            <tr><td>shows Physical Description field</td><td>Missing-specific field visible</td></tr>
+            <tr><td>hides Associate Person ID even when Pet selected</td><td>Assoc field fully suppressed in missing mode</td></tr>
+            <tr><td>narrative validation uses Missing Person error text</td><td>Translated error key used in missing mode</td></tr>
+            <tr><td>banner has missing class (purple theme)</td><td>Purple visual theme applied</td></tr>
+            <tr><td>pre-fills Incident ID from URL</td><td>URL param correctly populates field</td></tr>
+            <tr><td rowspan="3" style="font-weight:700;color:var(--teal-d);">Admin Form Mode toggle</td><td>Registration mode active by default</td><td>Default mode is Registration</td></tr>
+            <tr><td>switching to Missing Person shows pre-requisite callout</td><td>Admin warning appears on mode switch</td></tr>
+            <tr><td>switching back to Registration hides callout</td><td>Warning correctly hidden when not needed</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>When to Add Tests — Guidelines</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Situation</th><th>Add this type of test</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td>New field added to the form</td><td>Unit: field appended to chief complaint<br/>UI: field visible/hidden at right times</td><td>Adding a "Shelter Type" field</td></tr>
+            <tr><td>New conditional visibility rule</td><td>Unit: <code>shouldShowX()</code> function<br/>UI: element visible/hidden based on selection</td><td>A new field that only shows for certain reg types</td></tr>
+            <tr><td>Bug was found and fixed</td><td>Unit or UI: reproduce the exact bug scenario, assert it no longer happens</td><td>Empty assoc ID was appearing in CC — add test that proves it doesn't</td></tr>
+            <tr><td>New language added</td><td>UI: add the language code to the language switching loop</td><td>Adding Somali (so)</td></tr>
+            <tr><td>New form mode added</td><td>Unit: CC assembly for new mode<br/>UI: mode applies correct UI changes via URL param</td><td>Adding an "Assisted Living" mode</td></tr>
+            <tr><td>New API field mapped</td><td>Unit: <code>buildPayload()</code> includes new field correctly</td><td>Adding a <code>contacts</code> field to the payload</td></tr>
+            <tr><td>Layer 3 (once firewall open)</td><td>E2E: full submit → verify patient appears in Pulsara demo</td><td>Real end-to-end submission test</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>GitHub Actions CI Pipeline</h3>
+      <p>Tests run automatically on every push to <code>main</code> via <code>.github/workflows/test.yml</code>. Results appear as a ✅ or ❌ next to each commit in the GitHub repo.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Job</th><th>Trigger</th><th>Duration</th><th>Tool</th><th>Network Required</th></tr></thead>
+          <tbody>
+            <tr><td>Layer 2 · Unit Tests</td><td>Every push to main</td><td>~18 seconds</td><td>Vitest</td><td>No</td></tr>
+            <tr><td>Layer 1 · UI Tests</td><td>Every push to main</td><td>~35 seconds</td><td>Playwright + Chromium</td><td>No (local server)</td></tr>
+            <tr><td>Layer 3 · E2E Tests</td><td>Nightly cron (planned)</td><td>~5 minutes</td><td>Playwright + Pulsara Demo</td><td>Yes — awaiting firewall</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">⚠️ <strong>Layer 3</strong> (live Pulsara E2E tests) is not yet active. It will be enabled once the firewall is configured to allow GitHub Actions IP ranges to reach the Pulsara demo environment.</div>
+
+    </div>
+  </div>
+
+  <!-- ══ 11. FUTURE ENHANCEMENTS ══ -->
   <div class="section" id="s10">
     <div class="section-head"><div class="section-num">10</div><h2>Future Enhancement Ideas</h2></div>
     <div class="section-body">
