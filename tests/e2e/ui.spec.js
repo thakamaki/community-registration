@@ -181,25 +181,19 @@ test.describe('Narrative preview panel', () => {
     await expect(page.locator('#narrativePreviewRows')).toContainText('WB-001');
   });
 
-  test('panel hides again when all appended fields cleared', async ({ page }) => {
+  test('panel shows only reg type row after all other fields cleared', async ({ page }) => {
     await page.fill('#phone', '555-1234');
     await page.fill('#city', 'Houston');
     await expect(page.locator('#narrativePreview')).toBeVisible();
-    // Clear all fields that contribute to the preview
+    // Clear all fields — preview stays visible because regType always shows
     await page.fill('#phone', '');
     await page.locator('#phone').dispatchEvent('input');
     await page.fill('#city', '');
     await page.locator('#city').dispatchEvent('input');
-    await page.fill('#address', '');
-    await page.locator('#address').dispatchEvent('input');
-    await page.fill('#state', '');
-    await page.locator('#state').dispatchEvent('input');
-    await page.fill('#zip', '');
-    await page.locator('#zip').dispatchEvent('input');
-    // Reset reg type so it doesn't hold the preview open
-    await page.check('input[name="regType"][value="Person"]');
-    await page.locator('input[name="regType"][value="Person"]').dispatchEvent('change');
-    await expect(page.locator('#narrativePreview')).toBeHidden();
+    // Only the Registration Type row should remain
+    const rows = page.locator('#narrativePreviewRows > div');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText('Type');
   });
 });
 
